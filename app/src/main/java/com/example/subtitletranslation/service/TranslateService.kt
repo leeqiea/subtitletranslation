@@ -23,6 +23,7 @@ class TranslateService {
     fun translate(
         text: String,
         targetLang: String,
+        sourceLangHint: String? = null,
         onResult: (String, String) -> Unit,
         onDetectedSource: ((String?) -> Unit)? = null
     ) {
@@ -34,6 +35,17 @@ class TranslateService {
         }
 
         val seqId = seq.incrementAndGet()
+        val hintedSource = normalizeTranslateLang(sourceLangHint)
+        if (hintedSource != null) {
+            onDetectedSource?.invoke(hintedSource)
+            if (hintedSource == target) {
+                onResult(text, text)
+                return
+            }
+            translateWithResolvedSource(text, hintedSource, target, seqId, onResult)
+            return
+        }
+
         languageIdentifier.identifyLanguage(text)
             .addOnSuccessListener { langTag ->
                 if (seq.get() != seqId) return@addOnSuccessListener
@@ -43,21 +55,7 @@ class TranslateService {
                     onResult(text, text)
                     return@addOnSuccessListener
                 }
-                val tr = getTranslator(source, target)
-                tr.downloadModelIfNeeded(DownloadConditions.Builder().build())
-                    .addOnSuccessListener {
-                        tr.translate(text)
-                            .addOnSuccessListener { translated ->
-                                if (seq.get() != seqId) return@addOnSuccessListener
-                                onResult(text, translated)
-                            }
-                            .addOnFailureListener {
-                                onResult(text, text)
-                            }
-                    }
-                    .addOnFailureListener {
-                        onResult(text, text)
-                    }
+                translateWithResolvedSource(text, source, target, seqId, onResult)
             }
             .addOnFailureListener {
                 onDetectedSource?.invoke(null)
@@ -96,6 +94,30 @@ class TranslateService {
         translator = Translation.getClient(options)
         translatorKey = key
         return translator!!
+    }
+
+    private fun translateWithResolvedSource(
+        text: String,
+        sourceLang: String,
+        targetLang: String,
+        seqId: Long,
+        onResult: (String, String) -> Unit
+    ) {
+        val tr = getTranslator(sourceLang, targetLang)
+        tr.downloadModelIfNeeded(DownloadConditions.Builder().build())
+            .addOnSuccessListener {
+                tr.translate(text)
+                    .addOnSuccessListener { translated ->
+                        if (seq.get() != seqId) return@addOnSuccessListener
+                        onResult(text, translated)
+                    }
+                    .addOnFailureListener {
+                        onResult(text, text)
+                    }
+            }
+            .addOnFailureListener {
+                onResult(text, text)
+            }
     }
 
     private fun normalizeTranslateLang(tag: String?): String? {

@@ -27,6 +27,7 @@ import androidx.core.content.edit
 import com.example.subtitletranslation.MainActivity
 import com.example.subtitletranslation.R
 import com.example.subtitletranslation.model.ModelManager
+import com.example.subtitletranslation.util.AsrLanguageResolver
 import com.google.mlkit.nl.translate.TranslateLanguage
 import org.vosk.Model
 import org.vosk.Recognizer
@@ -57,6 +58,7 @@ class OverlayService : Service() {
         private const val PREF_OVERLAY_X = "overlay_x"
         private const val PREF_OVERLAY_Y = "overlay_y"
         private const val PREF_OVERLAY_SCALE = "overlay_scale"
+        private const val PREF_SOURCE_LANG_FOR_MODEL_PREFIX = "asr_source_lang_for_model_"
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -99,6 +101,7 @@ class OverlayService : Service() {
     private val serviceExecutor = Executors.newSingleThreadExecutor()
     private val recognizerExecutor = Executors.newSingleThreadExecutor()
     private var lastLoggedTargetLang: String? = null
+    private var lastLoggedSourceLang: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -562,15 +565,22 @@ class OverlayService : Service() {
 
     private fun translateAndUpdate(text: String) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val modelId = prefs.getString("asr_model_id", null) ?: prefs.getString("asr_lang", null)
+        val sourceLang = resolveSourceLang(prefs, modelId)
         val targetLang = prefs.getString("translate_target_lang", TranslateLanguage.CHINESE)
             ?: TranslateLanguage.CHINESE
         if (targetLang != lastLoggedTargetLang) {
             Log.i(TAG, "translateAndUpdate: targetLang from prefs = $targetLang")
             lastLoggedTargetLang = targetLang
         }
+        if (sourceLang != lastLoggedSourceLang) {
+            Log.i(TAG, "translateAndUpdate: sourceLang from model = $sourceLang, modelId=$modelId")
+            lastLoggedSourceLang = sourceLang
+        }
         translateService.translate(
             text,
             targetLang,
+            sourceLang,
             { original, translated ->
                 updateSubtitle(original, translated)
             },
@@ -580,6 +590,15 @@ class OverlayService : Service() {
                 }
             }
         )
+    }
+
+    private fun resolveSourceLang(
+        prefs: android.content.SharedPreferences,
+        modelId: String?
+    ): String? {
+        if (modelId.isNullOrBlank()) return null
+        return prefs.getString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + modelId, null)
+            ?: AsrLanguageResolver.resolveTranslateSourceLanguage(modelId)
     }
 
     private fun resolveInstalledModelPath(

@@ -24,6 +24,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.subtitletranslation.model.ModelManager
 import com.example.subtitletranslation.service.OverlayService
+import com.example.subtitletranslation.util.AsrLanguageResolver
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_LANGKEY_FOR_CODE_PREFIX = "asr_langkey_for_code_"
         private const val PREF_LANGKEY_FOR_MODEL_PREFIX = "asr_langkey_for_model_"
         private const val PREF_MODEL_URL_PREFIX = "asr_model_url_"
+        private const val PREF_SOURCE_LANG_FOR_MODEL_PREFIX = "asr_source_lang_for_model_"
         private const val PREF_CURRENT_LANG_KEY = "asr_current_lang_key"
         private const val PREF_MODEL_META_TS = "asr_model_meta_ts"
         private const val PREF_TRANSLATE_DOWNLOAD_PENDING_PREFIX = "translate_dl_pending_"
@@ -624,9 +626,13 @@ class MainActivity : AppCompatActivity() {
     private fun selectModelForLanguage(item: LangItem, model: ModelInfo) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val langKey = item.langKey
+        val sourceLang = resolveSourceLangForModel(model)
         prefs.edit {
             putString(PREF_MODEL_FOR_LANG_PREFIX + langKey, model.id)
             putString(PREF_CURRENT_LANG_KEY, langKey)
+            if (!sourceLang.isNullOrBlank()) {
+                putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + model.id, sourceLang)
+            }
         }
         val shouldSwitchNow = true
 
@@ -641,6 +647,9 @@ class MainActivity : AppCompatActivity() {
             if (resolved != null && resolved.exists()) {
                 prefs.edit {
                     putString("asr_model_path_${model.id}", resolved.absolutePath)
+                    if (!sourceLang.isNullOrBlank()) {
+                        putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + model.id, sourceLang)
+                    }
                     if (shouldSwitchNow) {
                         putString(PREF_MODEL_ID, model.id)
                             .putString("asr_lang", model.id) // 兼容旧逻辑
@@ -661,6 +670,7 @@ class MainActivity : AppCompatActivity() {
         switchNow: Boolean
     ) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val sourceLang = resolveSourceLangForModel(model)
         Thread {
             try {
                 runOnUiThread { tvModelStatus.text = getString(R.string.download_progress, 0, model.id) }
@@ -670,6 +680,9 @@ class MainActivity : AppCompatActivity() {
                 prefs.edit {
                     putString("asr_model_path_${model.id}", modelRoot.absolutePath)
                     putString(PREF_MODEL_FOR_LANG_PREFIX + item.langKey, model.id)
+                    if (!sourceLang.isNullOrBlank()) {
+                        putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + model.id, sourceLang)
+                    }
                     if (switchNow) {
                         putString(PREF_MODEL_ID, model.id)
                             .putString("asr_lang", model.id)
@@ -690,6 +703,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun startCustomModelDownload(modelId: String, url: String) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val sourceLang = AsrLanguageResolver.resolveTranslateSourceLanguage(modelId)
         Thread {
             try {
                 runOnUiThread { tvModelStatus.text = getString(R.string.download_progress, 0, modelId) }
@@ -700,6 +714,9 @@ class MainActivity : AppCompatActivity() {
                     putString(PREF_MODEL_ID, modelId)
                         .putString("asr_lang", modelId) // 兼容旧逻辑
                         .putString("asr_model_path_$modelId", modelRoot.absolutePath)
+                    if (!sourceLang.isNullOrBlank()) {
+                        putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + modelId, sourceLang)
+                    }
                 }
                 runOnUiThread { tvModelStatus.text = getString(R.string.download_complete, modelId) }
             } catch (e: Exception) {
@@ -844,8 +861,12 @@ class MainActivity : AppCompatActivity() {
 
             for (m in models) {
                 val langKey = normalizeLangKey(m.lang ?: "Unknown")
+                val sourceLang = resolveSourceLangForModel(m)
                 putString(PREF_MODEL_URL_PREFIX + m.id, m.url)
                 putString(PREF_LANGKEY_FOR_MODEL_PREFIX + m.id, langKey)
+                if (!sourceLang.isNullOrBlank()) {
+                    putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + m.id, sourceLang)
+                }
             }
 
             val grouped = models.groupBy { it.lang ?: "Unknown" }
@@ -864,6 +885,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun resolveSourceLangForModel(model: ModelInfo): String? {
+        return model.lang?.let(::findLangCodeForName)
+            ?: AsrLanguageResolver.resolveTranslateSourceLanguage(model.id)
     }
 
     private fun buildLangItems(models: List<ModelInfo>): List<LangItem> {
