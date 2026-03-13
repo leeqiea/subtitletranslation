@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_overlay_panel"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="10dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvSubtitleOriginal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:maxWidth="300dp"
+            android:text="@string/overlay_original_sample"
+            android:textColor="@color/overlay_original_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvSubtitleTranslated"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="sans-serif"
+            android:maxWidth="300dp"
+            android:text="@string/overlay_translated_sample"
+            android:textColor="@color/overlay_translated_text"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/btnClose"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="10dp"
+        android:background="@drawable/bg_overlay_close"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:text="x"
+        android:textColor="@color/overlay_original_text"
+        android:textSize="14sp" />
+</LinearLayout>

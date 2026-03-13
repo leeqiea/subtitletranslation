@@ -1,0 +1,110 @@
+<resources>
+    <string name="app_name">字幕翻译</string>
+
+    <string name="home_title">系统音频字幕翻译</string>
+    <string name="home_subtitle_offline_hint">本软件提供的字幕识别与翻译均为离线模式，离线小模型可能不够精确。</string>
+    <string name="section_translation_settings">翻译设置</string>
+    <string name="target_lang_unset">目标语言：未设置</string>
+    <string name="btn_select_target_language">选择翻译目标语言</string>
+    <string name="translate_model_status_unchecked">翻译模型状态：未检查</string>
+    <string name="section_display_settings">显示设置</string>
+    <string name="display_mode_both_default">字幕显示：原文+翻译</string>
+    <string name="btn_toggle_display">切换字幕显示</string>
+    <string name="section_asr_model">识别模型</string>
+    <string name="btn_download_select_model">下载/选择识别模型</string>
+    <string name="model_status_unchecked">模型状态：未检查</string>
+    <string name="btn_start_system_audio_translation">开始系统音频翻译</string>
+
+    <string name="dialog_model_title">选择识别语言与模型</string>
+    <string name="dialog_model_hint">点击语言后可继续选择具体模型版本</string>
+    <string name="dialog_model_loading">加载模型列表中...</string>
+    <string name="dialog_custom_title">自定义模型下载</string>
+    <string name="hint_custom_model_name">模型名称（可选，如 my-model-en）</string>
+    <string name="hint_custom_model_url">模型 zip 直链 URL</string>
+    <string name="btn_custom_model_download">下载自定义模型</string>
+
+    <string name="overlay_original_sample">原文示例</string>
+    <string name="overlay_translated_sample">译文示例</string>
+
+    <string name="overlay_capture_auth_cancelled">系统音频捕获授权已取消</string>
+    <string name="toast_capture_auth_cancelled">你取消了系统音频捕获授权</string>
+    <string name="overlay_missing_record_permission">缺少录音权限，无法开始识别</string>
+    <string name="toast_need_record_permission">需要录音权限才能进行系统音频识别</string>
+    <string name="toast_model_not_selected">未选模型，请先在“下载/选择模型”里手动选择</string>
+    <string name="overlay_requesting_capture_auth">正在请求系统音频捕获授权...</string>
+    <string name="overlay_ready">系统音频翻译：准备就绪 ✅</string>
+    <string name="toast_start_service_failed">启动服务失败：%1$s</string>
+
+    <string name="model_status_not_selected">模型状态：未选择</string>
+    <string name="model_status_installed">模型已安装：%1$s</string>
+    <string name="model_status_not_installed">模型未安装：%1$s</string>
+
+    <string name="target_language_format">目标语言：%1$s (%2$s)</string>
+    <string name="display_mode_translation_only">仅翻译</string>
+    <string name="display_mode_both">原文+翻译</string>
+    <string name="display_mode_format">字幕显示：%1$s</string>
+
+    <string name="dialog_select_target_language_title">选择翻译目标语言</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="translate_model_downloading">翻译模型下载中：%1$s</string>
+    <string name="translate_model_ready">翻译模型已就绪：%1$s</string>
+    <string name="translate_model_download_failed">翻译模型下载失败：%1$s</string>
+    <string name="translate_model_not_downloaded">翻译模型未下载：%1$s</string>
+    <string name="translate_model_status_unknown">翻译模型状态未知</string>
+
+    <string name="dialog_close">关闭</string>
+    <string name="toast_enter_model_url">请输入模型 URL</string>
+    <string name="status_load_failed">加载失败：%1$s</string>
+    <string name="status_no_available_models">未找到可用模型</string>
+    <string name="model_option_size">(%1$s)</string>
+    <string name="model_option_installed_suffix">已安装</string>
+    <string name="dialog_select_model_title">选择模型：%1$s</string>
+    <string name="model_set">已设置：%1$s</string>
+    <string name="download_progress">下载中：%1$d%% (%2$s)</string>
+    <string name="download_complete">安装完成：%1$s</string>
+    <string name="download_failed">下载失败：%1$s</string>
+    <string name="lang_unknown">未知</string>
+    <string name="http_error_code">HTTP %1$d</string>
+
+    <string name="overlay_auth_received_start_capture">已收到授权，正在启动捕获...</string>
+    <string name="overlay_capture_auth_failed_or_canceled">捕获授权失败/取消</string>
+    <string name="overlay_starting_system_capture">开始捕获系统音频...</string>
+    <string name="overlay_cannot_capture_system_audio_restricted">读不到系统音频（系统限制）</string>
+    <string name="overlay_cannot_capture_system_audio_error">读不到系统音频：%1$s</string>
+    <string name="error_unknown">未知错误</string>
+    <string name="overlay_cannot_capture_system_audio_auth_invalid">读不到系统音频（授权失效）</string>
+    <string name="overlay_audio_capture_init_failed">音频采集初始化失败</string>
+    <string name="overlay_system_capture_failed_switch_to_mic">系统音频捕获失败，自动切换麦克风识别...</string>
+    <string name="overlay_audio_capture_failed">音频捕获失败：%1$s</string>
+    <string name="overlay_media_volume_zero">媒体音量=0，仍在持续尝试系统音频识别...</string>
+    <string name="overlay_start_capture_failed">启动捕获失败：%1$s</string>
+    <string name="overlay_starting_acr_capture">开始 ACR 音频识别...</string>
+    <string name="overlay_mic_capture_init_failed">麦克风采集初始化失败</string>
+    <string name="overlay_mic_capture_failed">麦克风捕获失败：%1$s</string>
+    <string name="overlay_start_acr_failed">启动 ACR 失败：%1$s</string>
+    <string name="overlay_audio_read_failed">音频读取失败：%1$s</string>
+    <string name="overlay_recognizer_thread_error">识别线程异常：%1$s</string>
+    <string name="overlay_capture_thread_crash">捕获线程崩溃已拦截：%1$s</string>
+    <string name="overlay_app_disallows_audio_capture">该应用不支持音频捕获</string>
+    <string name="overlay_fgs_media_projection_downgraded">系统限制：mediaProjection 前台类型被拒绝，已降级</string>
+    <string name="overlay_start_foreground_failed">启动前台服务失败：%1$s</string>
+    <string name="notif_channel_name">字幕悬浮窗</string>
+    <string name="notif_title_overlay_running">字幕悬浮窗运行中</string>
+    <string name="notif_text_tap_stop">点击停止可关闭悬浮窗</string>
+    <string name="notif_action_stop">停止</string>
+    <string name="overlay_create_failed">悬浮窗创建失败：%1$s</string>
+    <string name="overlay_model_not_selected">未选择模型：请先在主界面手动选择模型</string>
+    <string name="overlay_model_not_installed">模型未安装：%1$s，请先下载后再识别</string>
+    <string name="overlay_model_path_missing">模型目录不存在：%1$s</string>
+    <string name="overlay_recognizer_prepare_failed">识别器准备失败：%1$s</string>
+    <string name="overlay_model_load_failed">模型加载失败：%1$s</string>
+    <string name="overlay_recognizer_init_failed">识别器初始化失败：%1$s</string>
+
+    <string name="error_create_model_root">无法创建模型根目录：%1$s</string>
+    <string name="error_create_language_dir">无法创建语言目录：%1$s</string>
+    <string name="error_create_parent_dir">无法创建父目录：%1$s</string>
+    <string name="error_download_http">下载失败 HTTP %1$d: %2$s</string>
+    <string name="error_replace_model_dir">无法替换已安装的模型目录：%1$s</string>
+    <string name="error_model_invalid_layout">模型包不完整或与 Vosk 不兼容，缺少：%1$s</string>
+    <string name="error_model_too_large_mobile">当前识别模型过大，不适合在手机上稳定运行。请选择 small/lightweight 的 Vosk 模型。</string>
+</resources>

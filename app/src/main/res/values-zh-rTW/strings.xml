@@ -1,0 +1,110 @@
+<resources>
+    <string name="app_name">字幕翻譯</string>
+
+    <string name="home_title">系統音訊字幕翻譯</string>
+    <string name="home_subtitle_offline_hint">本軟體提供的字幕辨識與翻譯皆為離線模式，離線小模型可能不夠精確。</string>
+    <string name="section_translation_settings">翻譯設定</string>
+    <string name="target_lang_unset">目標語言：未設定</string>
+    <string name="btn_select_target_language">選擇翻譯目標語言</string>
+    <string name="translate_model_status_unchecked">翻譯模型狀態：未檢查</string>
+    <string name="section_display_settings">顯示設定</string>
+    <string name="display_mode_both_default">字幕顯示：原文+翻譯</string>
+    <string name="btn_toggle_display">切換字幕顯示</string>
+    <string name="section_asr_model">辨識模型</string>
+    <string name="btn_download_select_model">下載/選擇辨識模型</string>
+    <string name="model_status_unchecked">模型狀態：未檢查</string>
+    <string name="btn_start_system_audio_translation">開始系統音訊翻譯</string>
+
+    <string name="dialog_model_title">選擇辨識語言與模型</string>
+    <string name="dialog_model_hint">點擊語言後可繼續選擇具體模型版本</string>
+    <string name="dialog_model_loading">載入模型清單中...</string>
+    <string name="dialog_custom_title">自訂模型下載</string>
+    <string name="hint_custom_model_name">模型名稱（可選，如 my-model-en）</string>
+    <string name="hint_custom_model_url">模型 zip 直鏈 URL</string>
+    <string name="btn_custom_model_download">下載自訂模型</string>
+
+    <string name="overlay_original_sample">原文範例</string>
+    <string name="overlay_translated_sample">譯文範例</string>
+
+    <string name="overlay_capture_auth_cancelled">系統音訊擷取授權已取消</string>
+    <string name="toast_capture_auth_cancelled">你已取消系統音訊擷取授權</string>
+    <string name="overlay_missing_record_permission">缺少錄音權限，無法開始辨識</string>
+    <string name="toast_need_record_permission">需要錄音權限才能進行系統音訊辨識</string>
+    <string name="toast_model_not_selected">未選擇模型，請先在「下載/選擇模型」中手動選擇</string>
+    <string name="overlay_requesting_capture_auth">正在請求系統音訊擷取授權...</string>
+    <string name="overlay_ready">系統音訊翻譯：準備就緒 ✅</string>
+    <string name="toast_start_service_failed">啟動服務失敗：%1$s</string>
+
+    <string name="model_status_not_selected">模型狀態：未選擇</string>
+    <string name="model_status_installed">模型已安裝：%1$s</string>
+    <string name="model_status_not_installed">模型未安裝：%1$s</string>
+
+    <string name="target_language_format">目標語言：%1$s (%2$s)</string>
+    <string name="display_mode_translation_only">僅翻譯</string>
+    <string name="display_mode_both">原文+翻譯</string>
+    <string name="display_mode_format">字幕顯示：%1$s</string>
+
+    <string name="dialog_select_target_language_title">選擇翻譯目標語言</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="translate_model_downloading">翻譯模型下載中：%1$s</string>
+    <string name="translate_model_ready">翻譯模型已就緒：%1$s</string>
+    <string name="translate_model_download_failed">翻譯模型下載失敗：%1$s</string>
+    <string name="translate_model_not_downloaded">翻譯模型未下載：%1$s</string>
+    <string name="translate_model_status_unknown">翻譯模型狀態未知</string>
+
+    <string name="dialog_close">關閉</string>
+    <string name="toast_enter_model_url">請輸入模型 URL</string>
+    <string name="status_load_failed">載入失敗：%1$s</string>
+    <string name="status_no_available_models">未找到可用模型</string>
+    <string name="model_option_size">(%1$s)</string>
+    <string name="model_option_installed_suffix">已安裝</string>
+    <string name="dialog_select_model_title">選擇模型：%1$s</string>
+    <string name="model_set">已設定：%1$s</string>
+    <string name="download_progress">下載中：%1$d%% (%2$s)</string>
+    <string name="download_complete">安裝完成：%1$s</string>
+    <string name="download_failed">下載失敗：%1$s</string>
+    <string name="lang_unknown">未知</string>
+    <string name="http_error_code">HTTP %1$d</string>
+
+    <string name="overlay_auth_received_start_capture">已收到授權，正在啟動擷取...</string>
+    <string name="overlay_capture_auth_failed_or_canceled">擷取授權失敗/取消</string>
+    <string name="overlay_starting_system_capture">開始擷取系統音訊...</string>
+    <string name="overlay_cannot_capture_system_audio_restricted">無法讀取系統音訊（系統限制）</string>
+    <string name="overlay_cannot_capture_system_audio_error">無法讀取系統音訊：%1$s</string>
+    <string name="error_unknown">未知錯誤</string>
+    <string name="overlay_cannot_capture_system_audio_auth_invalid">無法讀取系統音訊（授權失效）</string>
+    <string name="overlay_audio_capture_init_failed">音訊採集初始化失敗</string>
+    <string name="overlay_system_capture_failed_switch_to_mic">系統音訊擷取失敗，自動切換麥克風辨識...</string>
+    <string name="overlay_audio_capture_failed">音訊擷取失敗：%1$s</string>
+    <string name="overlay_media_volume_zero">媒體音量=0，仍在持續嘗試系統音訊辨識...</string>
+    <string name="overlay_start_capture_failed">啟動擷取失敗：%1$s</string>
+    <string name="overlay_starting_acr_capture">開始 ACR 音訊辨識...</string>
+    <string name="overlay_mic_capture_init_failed">麥克風採集初始化失敗</string>
+    <string name="overlay_mic_capture_failed">麥克風擷取失敗：%1$s</string>
+    <string name="overlay_start_acr_failed">啟動 ACR 失敗：%1$s</string>
+    <string name="overlay_audio_read_failed">音訊讀取失敗：%1$s</string>
+    <string name="overlay_recognizer_thread_error">辨識執行緒異常：%1$s</string>
+    <string name="overlay_capture_thread_crash">擷取執行緒崩潰已攔截：%1$s</string>
+    <string name="overlay_app_disallows_audio_capture">該應用不支援音訊擷取</string>
+    <string name="overlay_fgs_media_projection_downgraded">系統限制：mediaProjection 前台類型被拒絕，已降級</string>
+    <string name="overlay_start_foreground_failed">啟動前台服務失敗：%1$s</string>
+    <string name="notif_channel_name">字幕懸浮窗</string>
+    <string name="notif_title_overlay_running">字幕懸浮窗執行中</string>
+    <string name="notif_text_tap_stop">點擊停止可關閉懸浮窗</string>
+    <string name="notif_action_stop">停止</string>
+    <string name="overlay_create_failed">懸浮窗建立失敗：%1$s</string>
+    <string name="overlay_model_not_selected">未選擇模型：請先在主畫面手動選擇模型</string>
+    <string name="overlay_model_not_installed">模型未安裝：%1$s，請先下載後再辨識</string>
+    <string name="overlay_model_path_missing">模型目錄不存在：%1$s</string>
+    <string name="overlay_recognizer_prepare_failed">辨識器準備失敗：%1$s</string>
+    <string name="overlay_model_load_failed">模型載入失敗：%1$s</string>
+    <string name="overlay_recognizer_init_failed">辨識器初始化失敗：%1$s</string>
+
+    <string name="error_create_model_root">無法建立模型根目錄：%1$s</string>
+    <string name="error_create_language_dir">無法建立語言目錄：%1$s</string>
+    <string name="error_create_parent_dir">無法建立父目錄：%1$s</string>
+    <string name="error_download_http">下載失敗 HTTP %1$d: %2$s</string>
+    <string name="error_replace_model_dir">無法替換已安裝的模型目錄：%1$s</string>
+    <string name="error_model_invalid_layout">模型包不完整或與 Vosk 不相容，缺少：%1$s</string>
+    <string name="error_model_too_large_mobile">目前辨識模型過大，不適合在手機上穩定執行。請選擇 small/lightweight 的 Vosk 模型。</string>
+</resources>

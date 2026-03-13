@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="surface_bg_top">#F3F8FF</color>
+    <color name="surface_bg_bottom">#E8F1FF</color>
+    <color name="surface_card">#EBFFFFFF</color>
+    <color name="surface_card_stroke">#2E4F8BF8</color>
+
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+
+    <color name="status_bg">#4D72B8</color>
+    <color name="status_text">#DCEAFF</color>
+
+    <color name="button_primary_start">#0F6EF2</color>
+    <color name="button_primary_end">#0EA5A4</color>
+    <color name="button_primary_text">#FFFFFFFF</color>
+
+    <color name="button_secondary_bg">#F8FBFF</color>
+    <color name="button_secondary_stroke">#7AA7FF</color>
+    <color name="button_secondary_text">#123A85</color>
+
+    <color name="input_bg">#FFFFFFFF</color>
+    <color name="input_stroke">#9AB4E8</color>
+
+    <color name="overlay_bg">#D810172A</color>
+    <color name="overlay_stroke">#66A5F3FC</color>
+    <color name="overlay_original_text">#F8FAFC</color>
+    <color name="overlay_translated_text">#FDE68A</color>
+    <color name="overlay_close_bg">#40FFFFFF</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

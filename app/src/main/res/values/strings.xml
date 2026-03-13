@@ -1,0 +1,110 @@
+<resources>
+    <string name="app_name">Subtitle Translation</string>
+
+    <string name="home_title">System Audio Subtitle Translation</string>
+    <string name="home_subtitle_offline_hint">All subtitle recognition and translation in this app runs offline. Small offline models may be less accurate.</string>
+    <string name="section_translation_settings">Translation Settings</string>
+    <string name="target_lang_unset">Target language: not set</string>
+    <string name="btn_select_target_language">Select target language</string>
+    <string name="translate_model_status_unchecked">Translation model status: unchecked</string>
+    <string name="section_display_settings">Display Settings</string>
+    <string name="display_mode_both_default">Subtitle display: Original + Translation</string>
+    <string name="btn_toggle_display">Toggle subtitle display</string>
+    <string name="section_asr_model">Recognition Model</string>
+    <string name="btn_download_select_model">Download/Select recognition model</string>
+    <string name="model_status_unchecked">Model status: unchecked</string>
+    <string name="btn_start_system_audio_translation">Start system audio translation</string>
+
+    <string name="dialog_model_title">Select recognition language and model</string>
+    <string name="dialog_model_hint">Tap a language to choose a specific model version</string>
+    <string name="dialog_model_loading">Loading model list...</string>
+    <string name="dialog_custom_title">Custom model download</string>
+    <string name="hint_custom_model_name">Model name (optional, e.g. my-model-en)</string>
+    <string name="hint_custom_model_url">Direct model zip URL</string>
+    <string name="btn_custom_model_download">Download custom model</string>
+
+    <string name="overlay_original_sample">Original sample</string>
+    <string name="overlay_translated_sample">Translated sample</string>
+
+    <string name="overlay_capture_auth_cancelled">System audio capture authorization was canceled</string>
+    <string name="toast_capture_auth_cancelled">You canceled system audio capture authorization</string>
+    <string name="overlay_missing_record_permission">Missing recording permission, cannot start recognition</string>
+    <string name="toast_need_record_permission">Recording permission is required for system audio recognition</string>
+    <string name="toast_model_not_selected">No model selected. Please select one in "Download/Select model" first.</string>
+    <string name="overlay_requesting_capture_auth">Requesting system audio capture authorization...</string>
+    <string name="overlay_ready">System audio translation: ready ✅</string>
+    <string name="toast_start_service_failed">Failed to start service: %1$s</string>
+
+    <string name="model_status_not_selected">Model status: not selected</string>
+    <string name="model_status_installed">Model installed: %1$s</string>
+    <string name="model_status_not_installed">Model not installed: %1$s</string>
+
+    <string name="target_language_format">Target language: %1$s (%2$s)</string>
+    <string name="display_mode_translation_only">Translation only</string>
+    <string name="display_mode_both">Original + Translation</string>
+    <string name="display_mode_format">Subtitle display: %1$s</string>
+
+    <string name="dialog_select_target_language_title">Select target translation language</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="translate_model_downloading">Translation model downloading: %1$s</string>
+    <string name="translate_model_ready">Translation model ready: %1$s</string>
+    <string name="translate_model_download_failed">Translation model download failed: %1$s</string>
+    <string name="translate_model_not_downloaded">Translation model not downloaded: %1$s</string>
+    <string name="translate_model_status_unknown">Translation model status unknown</string>
+
+    <string name="dialog_close">Close</string>
+    <string name="toast_enter_model_url">Please enter a model URL</string>
+    <string name="status_load_failed">Load failed: %1$s</string>
+    <string name="status_no_available_models">No available models found</string>
+    <string name="model_option_size">(%1$s)</string>
+    <string name="model_option_installed_suffix">Installed</string>
+    <string name="dialog_select_model_title">Select model: %1$s</string>
+    <string name="model_set">Set: %1$s</string>
+    <string name="download_progress">Downloading: %1$d%% (%2$s)</string>
+    <string name="download_complete">Installed: %1$s</string>
+    <string name="download_failed">Download failed: %1$s</string>
+    <string name="lang_unknown">Unknown</string>
+    <string name="http_error_code">HTTP %1$d</string>
+
+    <string name="overlay_auth_received_start_capture">Authorization received, starting capture...</string>
+    <string name="overlay_capture_auth_failed_or_canceled">Capture authorization failed/canceled</string>
+    <string name="overlay_starting_system_capture">Starting system audio capture...</string>
+    <string name="overlay_cannot_capture_system_audio_restricted">Cannot capture system audio (system restriction)</string>
+    <string name="overlay_cannot_capture_system_audio_error">Cannot capture system audio: %1$s</string>
+    <string name="error_unknown">Unknown error</string>
+    <string name="overlay_cannot_capture_system_audio_auth_invalid">Cannot capture system audio (authorization invalid)</string>
+    <string name="overlay_audio_capture_init_failed">Audio capture initialization failed</string>
+    <string name="overlay_system_capture_failed_switch_to_mic">System audio capture failed, switching to microphone recognition...</string>
+    <string name="overlay_audio_capture_failed">Audio capture failed: %1$s</string>
+    <string name="overlay_media_volume_zero">Media volume is 0, still trying system audio recognition...</string>
+    <string name="overlay_start_capture_failed">Failed to start capture: %1$s</string>
+    <string name="overlay_starting_acr_capture">Starting ACR audio recognition...</string>
+    <string name="overlay_mic_capture_init_failed">Microphone capture initialization failed</string>
+    <string name="overlay_mic_capture_failed">Microphone capture failed: %1$s</string>
+    <string name="overlay_start_acr_failed">Failed to start ACR: %1$s</string>
+    <string name="overlay_audio_read_failed">Audio read failed: %1$s</string>
+    <string name="overlay_recognizer_thread_error">Recognizer thread error: %1$s</string>
+    <string name="overlay_capture_thread_crash">Capture thread crash intercepted: %1$s</string>
+    <string name="overlay_app_disallows_audio_capture">This app does not support audio capture</string>
+    <string name="overlay_fgs_media_projection_downgraded">System restriction: mediaProjection foreground type denied, downgraded</string>
+    <string name="overlay_start_foreground_failed">Failed to start foreground service: %1$s</string>
+    <string name="notif_channel_name">Subtitle Overlay</string>
+    <string name="notif_title_overlay_running">Subtitle overlay is running</string>
+    <string name="notif_text_tap_stop">Tap Stop to close the overlay</string>
+    <string name="notif_action_stop">Stop</string>
+    <string name="overlay_create_failed">Failed to create overlay: %1$s</string>
+    <string name="overlay_model_not_selected">No model selected: please select one manually in the main screen</string>
+    <string name="overlay_model_not_installed">Model not installed: %1$s. Download it before recognition</string>
+    <string name="overlay_model_path_missing">Model directory not found: %1$s</string>
+    <string name="overlay_recognizer_prepare_failed">Recognizer preparation failed: %1$s</string>
+    <string name="overlay_model_load_failed">Model load failed: %1$s</string>
+    <string name="overlay_recognizer_init_failed">Recognizer initialization failed: %1$s</string>
+
+    <string name="error_create_model_root">Cannot create model root directory: %1$s</string>
+    <string name="error_create_language_dir">Cannot create language directory: %1$s</string>
+    <string name="error_create_parent_dir">Cannot create parent directory: %1$s</string>
+    <string name="error_download_http">Download failed HTTP %1$d: %2$s</string>
+    <string name="error_replace_model_dir">Cannot replace installed model directory: %1$s</string>
+    <string name="error_model_invalid_layout">Model package is incomplete or incompatible. Missing: %1$s</string>
+    <string name="error_model_too_large_mobile">This recognition model is too large for stable on-device use. Please choose a small/lightweight Vosk model.</string>
+</resources>

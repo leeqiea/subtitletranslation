@@ -1,0 +1,11 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.SubtitleTranslation" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/button_primary_start</item>
+        <item name="colorSecondary">@color/button_primary_end</item>
+        <item name="android:statusBarColor">@color/surface_bg_top</item>
+        <item name="android:navigationBarColor">@color/surface_bg_bottom</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>
