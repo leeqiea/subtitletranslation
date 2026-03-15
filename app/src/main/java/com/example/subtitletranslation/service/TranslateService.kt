@@ -14,6 +14,7 @@ class TranslateService {
     private val seq = AtomicLong(0)
     private var translator: Translator? = null
     private var translatorKey: String? = null
+    private var readyTranslatorKey: String? = null
     private val languageIdentifier = LanguageIdentification.getClient(
         LanguageIdentificationOptions.Builder()
             .setConfidenceThreshold(0.5f)
@@ -74,6 +75,7 @@ class TranslateService {
         }
         translator = null
         translatorKey = null
+        readyTranslatorKey = null
         try {
             languageIdentifier.close()
         } catch (_: Exception) {
@@ -93,6 +95,7 @@ class TranslateService {
             .build()
         translator = Translation.getClient(options)
         translatorKey = key
+        readyTranslatorKey = null
         return translator!!
     }
 
@@ -104,18 +107,36 @@ class TranslateService {
         onResult: (String, String) -> Unit
     ) {
         val tr = getTranslator(sourceLang, targetLang)
+        val key = "$sourceLang->$targetLang"
+        if (readyTranslatorKey == key) {
+            translateText(tr, text, seqId, onResult)
+            return
+        }
         tr.downloadModelIfNeeded(DownloadConditions.Builder().build())
             .addOnSuccessListener {
-                tr.translate(text)
-                    .addOnSuccessListener { translated ->
-                        if (seq.get() != seqId) return@addOnSuccessListener
-                        onResult(text, translated)
-                    }
-                    .addOnFailureListener {
-                        onResult(text, text)
-                    }
+                if (seq.get() != seqId) return@addOnSuccessListener
+                readyTranslatorKey = key
+                translateText(tr, text, seqId, onResult)
             }
             .addOnFailureListener {
+                if (seq.get() != seqId) return@addOnFailureListener
+                onResult(text, text)
+            }
+    }
+
+    private fun translateText(
+        translator: Translator,
+        text: String,
+        seqId: Long,
+        onResult: (String, String) -> Unit
+    ) {
+        translator.translate(text)
+            .addOnSuccessListener { translated ->
+                if (seq.get() != seqId) return@addOnSuccessListener
+                onResult(text, translated)
+            }
+            .addOnFailureListener {
+                if (seq.get() != seqId) return@addOnFailureListener
                 onResult(text, text)
             }
     }

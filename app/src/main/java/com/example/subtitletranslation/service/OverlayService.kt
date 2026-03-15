@@ -59,6 +59,10 @@ class OverlayService : Service() {
         private const val PREF_OVERLAY_Y = "overlay_y"
         private const val PREF_OVERLAY_SCALE = "overlay_scale"
         private const val PREF_SOURCE_LANG_FOR_MODEL_PREFIX = "asr_source_lang_for_model_"
+        private const val TRANSLATION_PENDING = "..."
+        private const val PARTIAL_TRANSLATE_MIN_INTERVAL_MS = 450L
+        private const val PARTIAL_TRANSLATE_FORCE_INTERVAL_MS = 1200L
+        private const val PARTIAL_TRANSLATE_MIN_CHAR_DELTA = 4
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -90,6 +94,7 @@ class OverlayService : Service() {
 
     private var lastOriginal: String = ""
     private var lastTranslated: String = ""
+    private var lastTranslatedSource: String = ""
     private var isForeground = false
     private var warnedNoMediaProjectionFgs = false
 
@@ -102,6 +107,8 @@ class OverlayService : Service() {
     private val recognizerExecutor = Executors.newSingleThreadExecutor()
     private var lastLoggedTargetLang: String? = null
     private var lastLoggedSourceLang: String? = null
+    private var lastTranslationRequestText: String = ""
+    private var lastTranslationRequestAt: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -251,6 +258,7 @@ class OverlayService : Service() {
             blockDetected = false
             silentMs = 0L
             sawAnyText = false
+            resetRealtimeTranslationState()
             updateSubtitle(getString(R.string.overlay_starting_system_capture), "")
             lastFinalOriginal = ""
 
@@ -364,6 +372,7 @@ class OverlayService : Service() {
             blockDetected = false
             silentMs = 0L
             sawAnyText = false
+            resetRealtimeTranslationState()
             updateSubtitle(getString(R.string.overlay_starting_acr_capture), "")
             lastFinalOriginal = ""
 
@@ -489,11 +498,7 @@ class OverlayService : Service() {
                         if (text.isNotBlank()) {
                             if (blockDetected) blockDetected = false
                             sawAnyText = true
-                            if (isFinal) {
-                                handleFinalText(text)
-                            } else {
-                                updateSubtitle(text, "...")
-                            }
+                            handleRecognizedText(text, isFinal, now)
                         }
                         lastUi = now
                     }
@@ -521,7 +526,7 @@ class OverlayService : Service() {
         captureStartInFlight = false
         captureUsesProjection = false
         captureUsesMicrophone = false
-        translateService.cancelPending()
+        resetRealtimeTranslationState()
         try {
             captureThread?.join(300)
         } catch (_: Exception) {
@@ -544,11 +549,30 @@ class OverlayService : Service() {
 
     private var lastFinalOriginal: String = ""
 
+    private fun handleRecognizedText(text: String, isFinal: Boolean, now: Long) {
+        if (isFinal) {
+            handleFinalText(text)
+        } else {
+            handlePartialText(text, now)
+        }
+    }
+
+    private fun handlePartialText(text: String, now: Long) {
+        updateSubtitle(text, translationPreviewFor(text))
+        if (!shouldTranslatePartial(text, now)) return
+        requestTranslation(text, allowPrefixMatch = true)
+    }
+
     private fun handleFinalText(text: String) {
         if (text == lastFinalOriginal) return
         lastFinalOriginal = text
-        updateSubtitle(text, "...")
-        translateAndUpdate(text)
+        val alreadyTranslated = lastTranslatedSource == text &&
+                lastTranslated.isNotBlank() &&
+                lastTranslated != TRANSLATION_PENDING
+        updateSubtitle(text, if (alreadyTranslated) lastTranslated else translationPreviewFor(text))
+        if (!alreadyTranslated) {
+            requestTranslation(text, allowPrefixMatch = false)
+        }
     }
 
     private var silentMs: Long = 0
@@ -563,7 +587,36 @@ class OverlayService : Service() {
         }
     }
 
-    private fun translateAndUpdate(text: String) {
+    private fun shouldTranslatePartial(text: String, now: Long): Boolean {
+        if (text == lastTranslationRequestText) return false
+        if (text.length < 2) return false
+        if (lastTranslationRequestText.isBlank()) return true
+
+        val elapsed = now - lastTranslationRequestAt
+        if (looksLikeSentenceBoundary(text)) {
+            return elapsed >= PARTIAL_TRANSLATE_MIN_INTERVAL_MS / 2
+        }
+        if (!text.startsWith(lastTranslationRequestText)) {
+            return true
+        }
+        val grewBy = text.length - lastTranslationRequestText.length
+        if (grewBy >= PARTIAL_TRANSLATE_MIN_CHAR_DELTA && elapsed >= PARTIAL_TRANSLATE_MIN_INTERVAL_MS) {
+            return true
+        }
+        return elapsed >= PARTIAL_TRANSLATE_FORCE_INTERVAL_MS
+    }
+
+    private fun translationPreviewFor(text: String): String {
+        val hasTranslatedPreview = lastTranslatedSource.isNotBlank() &&
+                lastTranslated.isNotBlank() &&
+                lastTranslated != TRANSLATION_PENDING &&
+                text.startsWith(lastTranslatedSource)
+        return if (hasTranslatedPreview) lastTranslated else TRANSLATION_PENDING
+    }
+
+    private fun requestTranslation(text: String, allowPrefixMatch: Boolean) {
+        lastTranslationRequestText = text
+        lastTranslationRequestAt = System.currentTimeMillis()
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val modelId = prefs.getString("asr_model_id", null) ?: prefs.getString("asr_lang", null)
         val sourceLang = resolveSourceLang(prefs, modelId)
@@ -582,7 +635,7 @@ class OverlayService : Service() {
             targetLang,
             sourceLang,
             { original, translated ->
-                updateSubtitle(original, translated)
+                applyTranslationResult(original, translated, allowPrefixMatch)
             },
             { sourceLang ->
                 if (!sourceLang.isNullOrBlank()) {
@@ -590,6 +643,26 @@ class OverlayService : Service() {
                 }
             }
         )
+    }
+
+    private fun applyTranslationResult(
+        original: String,
+        translated: String,
+        allowPrefixMatch: Boolean
+    ) {
+        val currentOriginal = lastOriginal
+        val matchesCurrent = currentOriginal == original ||
+                (allowPrefixMatch && currentOriginal.startsWith(original))
+        if (!matchesCurrent) return
+        lastTranslatedSource = original
+        updateSubtitle(currentOriginal, translated)
+    }
+
+    private fun resetRealtimeTranslationState() {
+        translateService.cancelPending()
+        lastTranslationRequestText = ""
+        lastTranslationRequestAt = 0L
+        lastTranslatedSource = ""
     }
 
     private fun resolveSourceLang(
@@ -1011,5 +1084,12 @@ class OverlayService : Service() {
         } catch (_: Exception) {
             ""
         }
+
+    private fun looksLikeSentenceBoundary(text: String): Boolean {
+        return when (text.lastOrNull()) {
+            '.', ',', '!', '?', ';', ':', '。', '，', '！', '？', '；', '：' -> true
+            else -> false
+        }
+    }
 
 }
