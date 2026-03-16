@@ -61,6 +61,12 @@
     <string name="dialog_select_model_title">Select model: %1$s</string>
     <string name="model_set">Set: %1$s</string>
     <string name="download_progress">Downloading: %1$d%% (%2$s)</string>
+    <string name="download_preparing">Preparing download: %1$s</string>
+    <string name="download_progress_large">Downloading %1$s: %2$d%%, %3$s / %4$s, %5$s, ETA %6$s</string>
+    <string name="download_extracting">Extracting: %1$s</string>
+    <string name="download_validating">Validating: %1$s</string>
+    <string name="download_paused">Paused: %1$s</string>
+    <string name="download_cancelled">Cancelled: %1$s</string>
     <string name="download_complete">Installed: %1$s</string>
     <string name="download_failed">Download failed: %1$s</string>
     <string name="lang_unknown">Unknown</string>
@@ -103,8 +109,26 @@
     <string name="error_create_model_root">Cannot create model root directory: %1$s</string>
     <string name="error_create_language_dir">Cannot create language directory: %1$s</string>
     <string name="error_create_parent_dir">Cannot create parent directory: %1$s</string>
+    <string name="error_no_network">No network connection available</string>
+    <string name="error_not_enough_storage">Not enough storage. Need about %1$s free, currently available %2$s.</string>
     <string name="error_download_http">Download failed HTTP %1$d: %2$s</string>
     <string name="error_replace_model_dir">Cannot replace installed model directory: %1$s</string>
     <string name="error_model_invalid_layout">Model package is incomplete or incompatible. Missing: %1$s</string>
-    <string name="error_model_too_large_mobile">This recognition model is too large for stable on-device use. Please choose a small/lightweight Vosk model.</string>
+    <string name="error_model_too_large_mobile">This recognition model is very large. It can now be installed, but loading on a phone may be slow or run out of memory.</string>
+
+    <string name="notif_channel_downloads">Model Downloads</string>
+    <string name="notif_channel_downloads_desc">Shows progress for large recognition model downloads</string>
+    <string name="notif_model_download">Recognition model download</string>
+    <string name="notif_downloading_model">Downloading model: %1$s</string>
+    <string name="notif_extracting_model">Extracting model: %1$s</string>
+    <string name="notif_validating_model">Validating model: %1$s</string>
+    <string name="notif_download_complete">Download complete: %1$s</string>
+    <string name="notif_download_failed">Download failed: %1$s</string>
+    <string name="notif_download_paused">Download paused: %1$s</string>
+    <string name="notif_download_cancelled">Download cancelled: %1$s</string>
+    <string name="notif_download_progress">%1$s / %2$s, %3$s/s, remaining %4$s</string>
+    <string name="notif_tap_to_resume">Open the app to resume the download</string>
+    <string name="time_seconds">%1$d sec</string>
+    <string name="time_minutes">%1$d min</string>
+    <string name="time_hours">%1$d hr</string>
 </resources>

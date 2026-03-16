@@ -4,10 +4,14 @@ package com.example.subtitletranslation
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.os.IBinder
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -23,7 +27,7 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.subtitletranslation.model.ModelManager
-import com.example.subtitletranslation.service.OverlayService
+import com.example.subtitletranslation.service.ModelDownloadService
 import com.example.subtitletranslation.util.AsrLanguageResolver
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
@@ -59,6 +63,11 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_TRANSLATE_DOWNLOAD_PENDING_PREFIX = "translate_dl_pending_"
         private const val PREF_TRANSLATE_DOWNLOAD_TS_PREFIX = "translate_dl_ts_"
         private const val TRANSLATE_DOWNLOAD_PENDING_TTL_MS = 2L * 60 * 60 * 1000
+        private const val OVERLAY_SERVICE_CLASS_SUFFIX = ".service.OverlayService"
+        private const val ACTION_OVERLAY_UPDATE = "com.example.subtitletranslation.action.UPDATE"
+        private const val ACTION_OVERLAY_START_CAPTURE = "com.example.subtitletranslation.action.START_CAPTURE"
+        private const val EXTRA_OVERLAY_RESULT_CODE = "result_code"
+        private const val EXTRA_OVERLAY_RESULT_DATA = "result_data"
     }
 
     // 从 Vosk 页面解析出来的一条模型元数据。
@@ -93,16 +102,41 @@ class MainActivity : AppCompatActivity() {
     private var cachedModelList: List<ModelInfo>? = null
     private var settingsPrefs: SharedPreferences? = null
     private var settingsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private val lastDownloadStatuses = mutableMapOf<String, ModelDownloadService.DownloadStatus>()
+
+    // 下载服务绑定
+    private var downloadService: ModelDownloadService? = null
+    private var downloadServiceBound = false
+
+    private val downloadServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as ModelDownloadService.LocalBinder
+            downloadService = binder.getService()
+            downloadServiceBound = true
+            downloadService?.setProgressCallback { progress ->
+                runOnUiThread { updateDownloadProgress(progress) }
+            }
+            downloadService?.getAllDownloadProgress()
+                ?.values
+                ?.sortedBy { it.modelId }
+                ?.forEach { progress ->
+                    runOnUiThread { updateDownloadProgress(progress) }
+                }
+        }
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            downloadServiceBound = false
+            downloadService = null
+        }
+    }
 
     // 申请 MediaProjection 授权（弹系统弹窗）
     private val mpLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { res ->
         if (res.resultCode == RESULT_OK && res.data != null) {
-            val i = Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_START_CAPTURE
-                putExtra(OverlayService.EXTRA_RESULT_CODE, res.resultCode)
-                putExtra(OverlayService.EXTRA_RESULT_DATA, res.data)
+            val i = overlayServiceIntent(ACTION_OVERLAY_START_CAPTURE).apply {
+                putExtra(EXTRA_OVERLAY_RESULT_CODE, res.resultCode)
+                putExtra(EXTRA_OVERLAY_RESULT_DATA, res.data)
             }
             startServiceCompat(i)
         } else {
@@ -143,6 +177,11 @@ class MainActivity : AppCompatActivity() {
         updateTargetLangUi()
         updateDisplayModeUi()
         ensureModelMetadataCachedAsync()
+
+        // Bind to download service
+        Intent(this, ModelDownloadService::class.java).also { intent ->
+            bindService(intent, downloadServiceConnection, Context.BIND_AUTO_CREATE)
+        }
 
         findViewById<Button>(R.id.btnSelectTargetLang).setOnClickListener {
             showTargetLanguageDialog()
@@ -211,6 +250,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         uninstallSettingsDebugLogs()
+        if (downloadServiceBound) {
+            downloadService?.clearProgressCallback()
+            unbindService(downloadServiceConnection)
+            downloadServiceBound = false
+        }
         super.onDestroy()
     }
 
@@ -311,6 +355,12 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
+    private fun overlayServiceIntent(action: String): Intent {
+        return Intent().setClassName(this, packageName + OVERLAY_SERVICE_CLASS_SUFFIX).apply {
+            this.action = action
+        }
+    }
+
     private fun currentModelId(prefs: SharedPreferences): String? {
         return prefs.getString(PREF_MODEL_ID, null) ?: prefs.getString("asr_lang", null)
     }
@@ -385,9 +435,7 @@ class MainActivity : AppCompatActivity() {
         prefs.edit { putString(PREF_DISPLAY_MODE, next) }
         updateDisplayModeUi()
         if (!hasOverlayPermission()) return
-        val i = Intent(this, OverlayService::class.java).apply {
-            action = OverlayService.ACTION_UPDATE
-        }
+        val i = overlayServiceIntent(ACTION_OVERLAY_UPDATE)
         startServiceCompat(i)
     }
 
@@ -705,66 +753,138 @@ class MainActivity : AppCompatActivity() {
         model: ModelInfo,
         switchNow: Boolean
     ) {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val sourceLang = resolveSourceLangForModel(model)
-        Thread {
-            try {
-                runOnUiThread { tvModelStatus.text = getString(R.string.download_progress, 0, model.id) }
-                val modelRoot = ModelManager.downloadAndInstall(this, model.id, model.url) { p ->
-                    runOnUiThread { tvModelStatus.text = getString(R.string.download_progress, p, model.id) }
-                }
-                prefs.edit {
-                    putString("asr_model_path_${model.id}", modelRoot.absolutePath)
-                    putString(PREF_MODEL_FOR_LANG_PREFIX + item.langKey, model.id)
-                    if (!sourceLang.isNullOrBlank()) {
-                        putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + model.id, sourceLang)
-                    }
-                    if (switchNow) {
-                        putString(PREF_MODEL_ID, model.id)
-                            .putString("asr_lang", model.id)
-                    }
-                }
-                runOnUiThread { tvModelStatus.text = getString(R.string.download_complete, model.id) }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    tvModelStatus.text = getString(
-                        R.string.download_failed,
-                        e.message ?: getString(R.string.error_unknown)
-                    )
-                }
-            }
-        }.start()
+        enqueueModelDownload(
+            modelId = model.id,
+            modelUrl = model.url,
+            installKey = model.id,
+            langKey = item.langKey,
+            sourceLang = sourceLang,
+            switchNow = switchNow
+        )
     }
 
     // 自定义模型下载逻辑和官方模型基本一致，只是少了官网元数据这一层。
     @SuppressLint("SetTextI18n")
     private fun startCustomModelDownload(modelId: String, url: String) {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val sourceLang = AsrLanguageResolver.resolveTranslateSourceLanguage(modelId)
-        Thread {
-            try {
-                runOnUiThread { tvModelStatus.text = getString(R.string.download_progress, 0, modelId) }
-                val modelRoot = ModelManager.downloadAndInstall(this, modelId, url) { p ->
-                    runOnUiThread { tvModelStatus.text = getString(R.string.download_progress, p, modelId) }
-                }
-                prefs.edit {
-                    putString(PREF_MODEL_ID, modelId)
-                        .putString("asr_lang", modelId) // 兼容旧逻辑
-                        .putString("asr_model_path_$modelId", modelRoot.absolutePath)
-                    if (!sourceLang.isNullOrBlank()) {
-                        putString(PREF_SOURCE_LANG_FOR_MODEL_PREFIX + modelId, sourceLang)
-                    }
-                }
-                runOnUiThread { tvModelStatus.text = getString(R.string.download_complete, modelId) }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    tvModelStatus.text = getString(
-                        R.string.download_failed,
-                        e.message ?: getString(R.string.error_unknown)
+        enqueueModelDownload(
+            modelId = modelId,
+            modelUrl = url,
+            installKey = modelId,
+            langKey = null,
+            sourceLang = sourceLang,
+            switchNow = true
+        )
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun enqueueModelDownload(
+        modelId: String,
+        modelUrl: String,
+        installKey: String,
+        langKey: String?,
+        sourceLang: String?,
+        switchNow: Boolean
+    ) {
+        lastDownloadStatuses.remove(modelId)
+        tvModelStatus.text = getString(R.string.download_preparing, modelId)
+        val intent = Intent(this, ModelDownloadService::class.java).apply {
+            action = ModelDownloadService.ACTION_START_DOWNLOAD
+            putExtra(ModelDownloadService.EXTRA_MODEL_ID, modelId)
+            putExtra(ModelDownloadService.EXTRA_MODEL_URL, modelUrl)
+            putExtra(ModelDownloadService.EXTRA_MODEL_LANG, installKey)
+            putExtra(ModelDownloadService.EXTRA_SWITCH_NOW, switchNow)
+            if (!langKey.isNullOrBlank()) {
+                putExtra(ModelDownloadService.EXTRA_LANG_KEY, langKey)
+            }
+            if (!sourceLang.isNullOrBlank()) {
+                putExtra(ModelDownloadService.EXTRA_SOURCE_LANG, sourceLang)
+            }
+        }
+        ContextCompat.startForegroundService(this, intent)
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun updateDownloadProgress(progress: ModelDownloadService.DownloadProgress) {
+        val previousStatus = lastDownloadStatuses.put(progress.modelId, progress.status)
+        tvModelStatus.text = when (progress.status) {
+            ModelDownloadService.DownloadStatus.DOWNLOADING -> {
+                if (progress.totalBytes > 0) {
+                    getString(
+                        R.string.download_progress_large,
+                        progress.modelId,
+                        progress.percentage,
+                        formatBytes(progress.bytesDownloaded),
+                        formatBytes(progress.totalBytes),
+                        formatSpeed(progress.speedBytesPerSecond),
+                        formatEta(progress.remainingTimeSeconds)
                     )
+                } else {
+                    getString(R.string.download_progress, progress.percentage, progress.modelId)
                 }
             }
-        }.start()
+
+            ModelDownloadService.DownloadStatus.EXTRACTING ->
+                getString(R.string.download_extracting, progress.modelId)
+
+            ModelDownloadService.DownloadStatus.VALIDATING ->
+                getString(R.string.download_validating, progress.modelId)
+
+            ModelDownloadService.DownloadStatus.PAUSED ->
+                getString(R.string.download_paused, progress.modelId)
+
+            ModelDownloadService.DownloadStatus.CANCELLED ->
+                getString(R.string.download_cancelled, progress.modelId)
+
+            ModelDownloadService.DownloadStatus.FAILED ->
+                getString(
+                    R.string.download_failed,
+                    progress.errorMessage ?: getString(R.string.error_unknown)
+                )
+
+            ModelDownloadService.DownloadStatus.COMPLETED -> {
+                updateModelStatus()
+                if (previousStatus != ModelDownloadService.DownloadStatus.COMPLETED) {
+                    ModelManager.resolveInstalledPath(this, progress.modelId)
+                        ?.let { ModelManager.getLargeModelWarning(this, it) }
+                        ?.let(::toast)
+                }
+                getString(R.string.download_complete, progress.modelId)
+            }
+
+            ModelDownloadService.DownloadStatus.IDLE ->
+                getString(R.string.model_status_unchecked)
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes <= 0L) return "0 B"
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var index = 0
+        while (value >= 1024.0 && index < units.lastIndex) {
+            value /= 1024.0
+            index++
+        }
+        return if (index == 0) {
+            "${value.toLong()} ${units[index]}"
+        } else {
+            String.format("%.1f %s", value, units[index])
+        }
+    }
+
+    private fun formatSpeed(bytesPerSecond: Long): String {
+        return "${formatBytes(bytesPerSecond)}/s"
+    }
+
+    private fun formatEta(seconds: Long): String {
+        return when {
+            seconds <= 0L -> getString(R.string.time_seconds, 0)
+            seconds < 60L -> getString(R.string.time_seconds, seconds)
+            seconds < 3600L -> getString(R.string.time_minutes, seconds / 60L)
+            else -> getString(R.string.time_hours, seconds / 3600L)
+        }
     }
 
     // 直接从 Vosk 官网 HTML 表格里抽取模型 id、语言、大小和下载链接。

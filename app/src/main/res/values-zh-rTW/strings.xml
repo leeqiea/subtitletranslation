@@ -61,6 +61,12 @@
     <string name="dialog_select_model_title">選擇模型：%1$s</string>
     <string name="model_set">已設定：%1$s</string>
     <string name="download_progress">下載中：%1$d%% (%2$s)</string>
+    <string name="download_preparing">準備下載：%1$s</string>
+    <string name="download_progress_large">下載 %1$s：%2$d%%，%3$s / %4$s，%5$s，預估剩餘 %6$s</string>
+    <string name="download_extracting">解壓中：%1$s</string>
+    <string name="download_validating">校驗中：%1$s</string>
+    <string name="download_paused">已暫停：%1$s</string>
+    <string name="download_cancelled">已取消：%1$s</string>
     <string name="download_complete">安裝完成：%1$s</string>
     <string name="download_failed">下載失敗：%1$s</string>
     <string name="lang_unknown">未知</string>
@@ -103,8 +109,26 @@
     <string name="error_create_model_root">無法建立模型根目錄：%1$s</string>
     <string name="error_create_language_dir">無法建立語言目錄：%1$s</string>
     <string name="error_create_parent_dir">無法建立父目錄：%1$s</string>
+    <string name="error_no_network">目前沒有可用的網路連線</string>
+    <string name="error_not_enough_storage">儲存空間不足，約需 %1$s，可用空間僅 %2$s。</string>
     <string name="error_download_http">下載失敗 HTTP %1$d: %2$s</string>
     <string name="error_replace_model_dir">無法替換已安裝的模型目錄：%1$s</string>
     <string name="error_model_invalid_layout">模型包不完整或與 Vosk 不相容，缺少：%1$s</string>
-    <string name="error_model_too_large_mobile">目前辨識模型過大，不適合在手機上穩定執行。請選擇 small/lightweight 的 Vosk 模型。</string>
+    <string name="error_model_too_large_mobile">目前辨識模型很大，現已允許安裝，但在手機上載入時可能很慢，或因記憶體不足而失敗。</string>
+
+    <string name="notif_channel_downloads">模型下載</string>
+    <string name="notif_channel_downloads_desc">顯示大型辨識模型的下載進度</string>
+    <string name="notif_model_download">辨識模型下載</string>
+    <string name="notif_downloading_model">正在下載模型：%1$s</string>
+    <string name="notif_extracting_model">正在解壓模型：%1$s</string>
+    <string name="notif_validating_model">正在校驗模型：%1$s</string>
+    <string name="notif_download_complete">下載完成：%1$s</string>
+    <string name="notif_download_failed">下載失敗：%1$s</string>
+    <string name="notif_download_paused">下載已暫停：%1$s</string>
+    <string name="notif_download_cancelled">下載已取消：%1$s</string>
+    <string name="notif_download_progress">%1$s / %2$s，%3$s/s，剩餘 %4$s</string>
+    <string name="notif_tap_to_resume">開啟應用可繼續下載</string>
+    <string name="time_seconds">%1$d 秒</string>
+    <string name="time_minutes">%1$d 分鐘</string>
+    <string name="time_hours">%1$d 小時</string>
 </resources>

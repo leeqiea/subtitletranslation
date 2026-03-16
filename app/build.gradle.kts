@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation("net.java.dev.jna:jna:5.18.1@aar")
     implementation("com.alphacephei:vosk-android:0.3.75@aar")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language.id)
     testImplementation(libs.junit)

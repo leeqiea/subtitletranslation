@@ -16,12 +16,24 @@ import java.util.zip.ZipInputStream
  */
 object ModelManager {
 
-    // 过大的模型在手机上常见问题是初始化慢、占内存高，所以这里提前拦住。
-    private const val MAX_RECOMMENDED_MODEL_BYTES = 600L * 1024L * 1024L
+    // 超大模型在手机上可能更慢、更吃内存，但不再直接阻止安装。
+    private const val LARGE_MODEL_WARNING_BYTES = 600L * 1024L * 1024L
 
     fun modelRoot(ctx: Context): File = File(ctx.filesDir, "vosk_models")
 
-    fun modelDir(ctx: Context, lang: String): File = File(modelRoot(ctx), lang)
+    fun modelDir(ctx: Context, lang: String): File = modelDir(modelRoot(ctx), lang)
+
+    fun modelDir(root: File, lang: String): File = File(root, lang)
+
+    fun selectWritableModelRoot(ctx: Context, requiredBytesHint: Long? = null): File {
+        val minFreeBytes = requiredBytesHint?.coerceAtLeast(0L) ?: 0L
+        return candidateRoots(ctx)
+            .sortedWith(
+                compareByDescending<File> { it.usableSpace >= minFreeBytes }
+                    .thenByDescending { it.usableSpace }
+            )
+            .first()
+    }
 
     fun isInstalled(ctx: Context, lang: String): Boolean {
         val resolved = resolveInstalledPath(ctx, lang) ?: return false
@@ -29,11 +41,14 @@ object ModelManager {
     }
 
     fun resolveInstalledPath(ctx: Context, lang: String): File? {
-        val dest = modelDir(ctx, lang)
-        if (!dest.exists() || !dest.isDirectory) return null
-        // 解压包有时会多包一层目录，这里统一收敛到真正的模型根目录。
-        val resolved = resolveModelRoot(dest)
-        return if (resolved.exists()) resolved else null
+        for (root in candidateRoots(ctx)) {
+            val dest = modelDir(root, lang)
+            if (!dest.exists() || !dest.isDirectory) continue
+            // 解压包有时会多包一层目录，这里统一收敛到真正的模型根目录。
+            val resolved = resolveModelRoot(dest)
+            if (resolved.exists()) return resolved
+        }
+        return null
     }
 
     // 启动识别前做结构校验，避免把损坏或桌面端模型直接交给 Vosk。
@@ -60,8 +75,8 @@ object ModelManager {
             return ctx.getString(R.string.error_model_invalid_layout, "graph/HCLG.fst")
         }
 
-        if (checkRuntimeSize && directorySize(modelDir) > MAX_RECOMMENDED_MODEL_BYTES) {
-            return ctx.getString(R.string.error_model_too_large_mobile)
+        if (checkRuntimeSize) {
+            // 兼容旧调用方：大模型只做提醒，不再因为体积过大直接判定为无效。
         }
 
         return null
@@ -74,14 +89,14 @@ object ModelManager {
         zipUrl: String,
         onProgress: (percent: Int) -> Unit
     ): File {
-        val root = modelRoot(ctx)
+        val root = selectWritableModelRoot(ctx)
         if (!root.exists() && !root.mkdirs()) {
             throw java.io.IOException(
                 ctx.getString(R.string.error_create_model_root, root.absolutePath)
             )
         }
 
-        val dest = modelDir(ctx, lang)
+        val dest = modelDir(root, lang)
         // 先下载到临时目录，全部成功后再替换正式目录，避免半下载状态污染现有模型。
         val staging = File(root, ".$lang.tmp-${System.currentTimeMillis()}")
         if (staging.exists()) staging.deleteRecursively()
@@ -105,6 +120,7 @@ object ModelManager {
             }
 
             // 安装新模型前先删除旧目录，避免新旧文件混在一起。
+            removeOtherInstalledCopies(ctx, lang, keepRoot = root)
             if (dest.exists() && !dest.deleteRecursively()) {
                 throw java.io.IOException(
                     ctx.getString(R.string.error_replace_model_dir, dest.absolutePath)
@@ -204,6 +220,26 @@ object ModelManager {
         return if (children.size == 1) children[0] else root
     }
 
+    // Public version for use by ModelDownloadService
+    fun resolveModelRootPublic(root: File): File = resolveModelRoot(root)
+
+    // Public version for use by ModelDownloadService
+    fun unzipModel(zipFile: File, destDir: File): File = unzip(zipFile, destDir)
+
+    fun isLargeModel(modelDir: File): Boolean = directorySize(modelDir) > LARGE_MODEL_WARNING_BYTES
+
+    fun getLargeModelWarning(ctx: Context, modelDir: File): String? {
+        return if (isLargeModel(modelDir)) {
+            ctx.getString(R.string.error_model_too_large_mobile)
+        } else {
+            null
+        }
+    }
+
+    fun removeOtherInstalledCopies(ctx: Context, lang: String, keepRoot: File) {
+        deleteOtherInstalledCopies(ctx, lang, keepRoot)
+    }
+
     private fun looksLikeModelRoot(dir: File): Boolean {
         return File(dir, "conf").isDirectory || File(dir, "am").isDirectory || File(dir, "graph").isDirectory
     }
@@ -214,5 +250,22 @@ object ModelManager {
         return dir.walkTopDown()
             .filter { it.isFile }
             .fold(0L) { total, file -> total + file.length() }
+    }
+
+    private fun candidateRoots(ctx: Context): List<File> {
+        val roots = linkedSetOf<File>()
+        roots.add(File(ctx.filesDir, "vosk_models"))
+        ctx.getExternalFilesDir(null)?.let { roots.add(File(it, "vosk_models")) }
+        return roots.toList()
+    }
+
+    private fun deleteOtherInstalledCopies(ctx: Context, lang: String, keepRoot: File) {
+        for (root in candidateRoots(ctx)) {
+            if (root.absolutePath == keepRoot.absolutePath) continue
+            val dir = modelDir(root, lang)
+            if (dir.exists()) {
+                dir.deleteRecursively()
+            }
+        }
     }
 }
