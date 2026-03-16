@@ -35,6 +35,12 @@ import java.io.File
 import java.util.concurrent.Executors
 import kotlin.math.sqrt
 
+/**
+ * 悬浮字幕服务负责三个并行职责：
+ * 1. 维持前台服务和悬浮窗生命周期。
+ * 2. 采集系统音频或麦克风音频并交给 Vosk 识别。
+ * 3. 把识别结果实时翻译后写回悬浮窗。
+ */
 class OverlayService : Service() {
 
     companion object {
@@ -60,19 +66,23 @@ class OverlayService : Service() {
         private const val PREF_OVERLAY_SCALE = "overlay_scale"
         private const val PREF_SOURCE_LANG_FOR_MODEL_PREFIX = "asr_source_lang_for_model_"
         private const val TRANSLATION_PENDING = "..."
+        // 对局部结果做节流，避免每个字符变化都触发一次翻译。
         private const val PARTIAL_TRANSLATE_MIN_INTERVAL_MS = 450L
         private const val PARTIAL_TRANSLATE_FORCE_INTERVAL_MS = 1200L
         private const val PARTIAL_TRANSLATE_MIN_CHAR_DELTA = 4
     }
 
+    // 所有 UI 更新都切回主线程，避免直接从识别线程操作悬浮窗。
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // 悬浮窗视图和它的位置/缩放参数。
     private lateinit var wm: WindowManager
     private var overlayView: View? = null
     private lateinit var params: WindowManager.LayoutParams
     private var overlayScale: Float = 1.0f
     private val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
 
+    // 音频采集链路相关对象。
     private var projection: MediaProjection? = null
     private var audioRecord: AudioRecord? = null
     private var captureThread: Thread? = null
@@ -92,6 +102,7 @@ class OverlayService : Service() {
     @Volatile
     private var captureUsesMicrophone = false
 
+    // 当前悬浮窗展示的原文、译文，以及最近一次译文对应的原文。
     private var lastOriginal: String = ""
     private var lastTranslated: String = ""
     private var lastTranslatedSource: String = ""
@@ -102,6 +113,7 @@ class OverlayService : Service() {
     private var tvTranslated: TextView? = null
 
     private val translateService = TranslateService()
+    // Vosk 的 Model / Recognizer 不是线程安全对象，切换和读取都走同一把锁。
     private val recLock = Any()
     private val serviceExecutor = Executors.newSingleThreadExecutor()
     private val recognizerExecutor = Executors.newSingleThreadExecutor()
@@ -110,6 +122,7 @@ class OverlayService : Service() {
     private var lastTranslationRequestText: String = ""
     private var lastTranslationRequestAt: Long = 0L
 
+    // 恢复悬浮窗位置和缩放，并初始化通知渠道。
     override fun onCreate() {
         super.onCreate()
 
@@ -137,6 +150,7 @@ class OverlayService : Service() {
         lastTranslated = getString(R.string.overlay_translated_sample)
     }
 
+    // 所有外部动作都通过 action 分发到这里，包括启动、刷新、停止和开始采集。
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
 
@@ -222,10 +236,12 @@ class OverlayService : Service() {
         return captureStartInFlight || captureUsesProjection || projection != null
     }
 
+    // 统一把空异常信息替换成通用文案，避免把 null 直接显示到界面。
     private fun messageOrUnknown(message: String?): String {
         return message ?: getString(R.string.error_unknown)
     }
 
+    // 简单计算音频帧的 RMS，用于判断“有音乐但捕获到的却几乎全是静音”的情况。
     private fun rms01(buf: ShortArray, n: Int): Double {
         var sum = 0.0
         for (i in 0 until n) {
@@ -235,6 +251,7 @@ class OverlayService : Service() {
         return sqrt(sum / n) / 32768.0
     }
 
+    // 使用 MediaProjection 采集系统播放音频，失败时会根据错误场景提示用户或退回麦克风。
     @SuppressLint("ServiceCast")
     private fun startAudioCapture(resultCode: Int, resultData: Intent) {
         if (capturing) {
@@ -352,6 +369,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 某些应用不允许系统播放采集时，退回麦克风识别链路。
     private fun startMicCapture() {
         if (capturing) return
         try {
@@ -414,6 +432,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 麦克风优先走 VOICE_RECOGNITION，失败再回退到普通 MIC。
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun buildMicAudioRecord(format: AudioFormat, minBuf: Int): AudioRecord {
         return try {
@@ -431,6 +450,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 单独的采集线程不断读取 PCM、喂给 Vosk，并把部分结果节流后更新到 UI。
     private fun startRecognizerLoop(
         minBuf: Int,
         sampleRate: Int,
@@ -521,6 +541,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 停止线程、录音器和投屏会话，确保下一次启动时状态干净。
     private fun stopAudioCapture() {
         capturing = false
         captureStartInFlight = false
@@ -549,6 +570,7 @@ class OverlayService : Service() {
 
     private var lastFinalOriginal: String = ""
 
+    // Vosk 的 final / partial 结果走不同策略：partial 追求流畅，final 追求稳定。
     private fun handleRecognizedText(text: String, isFinal: Boolean, now: Long) {
         if (isFinal) {
             handleFinalText(text)
@@ -557,12 +579,14 @@ class OverlayService : Service() {
         }
     }
 
+    // partial 结果先用上一次翻译预览占位，再按节流规则请求新翻译。
     private fun handlePartialText(text: String, now: Long) {
         updateSubtitle(text, translationPreviewFor(text))
         if (!shouldTranslatePartial(text, now)) return
         requestTranslation(text, allowPrefixMatch = true)
     }
 
+    // final 结果只处理一次，避免同一句结束结果反复触发翻译。
     private fun handleFinalText(text: String) {
         if (text == lastFinalOriginal) return
         lastFinalOriginal = text
@@ -578,6 +602,7 @@ class OverlayService : Service() {
     private var silentMs: Long = 0
     private var sawAnyText: Boolean = false
 
+    // 音乐明显在播放但长时间没识别到内容时，提示用户该应用可能屏蔽了音频采集。
     private fun handleCaptureBlocked() {
         if (blockDetected) return
         blockDetected = true
@@ -587,6 +612,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 只在文本增长足够多、时间足够久或接近句子边界时才翻译 partial，避免频繁抖动。
     private fun shouldTranslatePartial(text: String, now: Long): Boolean {
         if (text == lastTranslationRequestText) return false
         if (text.length < 2) return false
@@ -606,6 +632,7 @@ class OverlayService : Service() {
         return elapsed >= PARTIAL_TRANSLATE_FORCE_INTERVAL_MS
     }
 
+    // 当当前 partial 是上一次已翻译结果的前缀时，继续沿用旧译文做预览。
     private fun translationPreviewFor(text: String): String {
         val hasTranslatedPreview = lastTranslatedSource.isNotBlank() &&
                 lastTranslated.isNotBlank() &&
@@ -619,6 +646,7 @@ class OverlayService : Service() {
         lastTranslationRequestAt = System.currentTimeMillis()
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val modelId = prefs.getString("asr_model_id", null) ?: prefs.getString("asr_lang", null)
+        // 源语言优先取当前 ASR 模型绑定的语种，目标语言取用户选择值。
         val sourceLang = resolveSourceLang(prefs, modelId)
         val targetLang = prefs.getString("translate_target_lang", TranslateLanguage.CHINESE)
             ?: TranslateLanguage.CHINESE
@@ -645,6 +673,7 @@ class OverlayService : Service() {
         )
     }
 
+    // 只把仍然匹配当前悬浮窗文本的翻译结果回填，避免旧结果覆盖新字幕。
     private fun applyTranslationResult(
         original: String,
         translated: String,
@@ -658,6 +687,7 @@ class OverlayService : Service() {
         updateSubtitle(currentOriginal, translated)
     }
 
+    // 新一轮采集开始前把翻译链路状态清空，避免串用上一次上下文。
     private fun resetRealtimeTranslationState() {
         translateService.cancelPending()
         lastTranslationRequestText = ""
@@ -665,6 +695,7 @@ class OverlayService : Service() {
         lastTranslatedSource = ""
     }
 
+    // 从 SharedPreferences 或模型名推断出当前识别模型的源语言。
     private fun resolveSourceLang(
         prefs: android.content.SharedPreferences,
         modelId: String?
@@ -674,6 +705,7 @@ class OverlayService : Service() {
             ?: AsrLanguageResolver.resolveTranslateSourceLanguage(modelId)
     }
 
+    // 先用缓存路径，失效时再回到 ModelManager 重新解析真实安装目录。
     private fun resolveInstalledModelPath(
         prefs: android.content.SharedPreferences,
         modelId: String
@@ -686,6 +718,7 @@ class OverlayService : Service() {
 
     private var currentFgsType: Int = 0
 
+    // Android 14 对前台服务类型更严格，这里根据当前能力动态声明需要的类型。
     @SuppressLint("ForegroundServiceType")
     private fun ensureForeground(
         needMediaProjection: Boolean,
@@ -751,6 +784,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 和采集/启动相关的重操作都放到单线程执行器里，避免主线程阻塞。
     private fun runOnServiceExecutor(task: () -> Unit) {
         try {
             serviceExecutor.execute(task)
@@ -758,6 +792,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 给识别器预留的串行执行器，方便未来把耗时模型切换从主流程里拆出去。
     private fun runOnRecognizerExecutor(task: () -> Unit) {
         try {
             recognizerExecutor.execute(task)
@@ -765,6 +800,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 前台服务通知提供一个回到主界面的入口和一个快速停止入口。
     private fun buildNotification(): Notification {
         val contentIntent = PendingIntent.getActivity(
             this,
@@ -791,6 +827,7 @@ class OverlayService : Service() {
             .build()
     }
 
+    // Android 8+ 必须先建通知渠道，前台服务通知才能正常显示。
     private fun createNotificationChannel() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val ch = NotificationChannel(
@@ -801,6 +838,7 @@ class OverlayService : Service() {
         nm.createNotificationChannel(ch)
     }
 
+    // 悬浮窗只创建一次，后续文本更新直接复用同一套 View。
     @SuppressLint("InflateParams")
     private fun ensureOverlayCreated() {
         if (overlayView != null) return
@@ -827,12 +865,14 @@ class OverlayService : Service() {
         refreshSubtitleView()
     }
 
+    // 更新内存中的字幕状态，再统一走 refreshSubtitleView 渲染。
     private fun updateSubtitle(original: String, translated: String) {
         lastOriginal = original
         lastTranslated = translated
         refreshSubtitleView()
     }
 
+    // 根据当前显示模式决定悬浮窗里展示双语还是只展示译文。
     private fun refreshSubtitleView() {
         val translationOnly = isTranslationOnly()
         val original = lastOriginal
@@ -851,11 +891,13 @@ class OverlayService : Service() {
         }
     }
 
+    // “仅译文”模式由 SharedPreferences 控制，Activity 切换后 Service 会实时读取。
     private fun isTranslationOnly(): Boolean {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         return prefs.getString(PREF_DISPLAY_MODE, null) == DISPLAY_TRANSLATION_ONLY
     }
 
+    // 统一关闭采集、移除悬浮窗、释放翻译器，并结束服务。
     private fun stopOverlayAndSelf() {
         stopAudioCapture()
         overlayView?.let {
@@ -877,6 +919,7 @@ class OverlayService : Service() {
         stopSelf()
     }
 
+    // 进程或系统主动销毁服务时，也要走一遍资源释放逻辑。
     override fun onDestroy() {
         captureStartInFlight = false
         stopAudioCapture()
@@ -897,6 +940,7 @@ class OverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    // 支持拖动位置和双指缩放，结果会持久化到 SharedPreferences。
     private inner class DragTouchListener : View.OnTouchListener {
         private var startX = 0
         private var startY = 0
@@ -953,6 +997,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 保存悬浮窗位置，让下次启动时保持在用户上次停留的位置。
     private fun saveOverlayPosition() {
         getSharedPreferences("settings", MODE_PRIVATE).edit {
             putInt(PREF_OVERLAY_X, params.x)
@@ -960,15 +1005,19 @@ class OverlayService : Service() {
         }
     }
 
+    // 保存缩放倍率，避免每次重启服务后都恢复默认大小。
     private fun saveOverlayScale() {
         getSharedPreferences("settings", MODE_PRIVATE).edit {
             putFloat(PREF_OVERLAY_SCALE, overlayScale)
         }
     }
 
+    // 当前加载的 Vosk 模型和识别器实例。
     private var voskModel: Model? = null
     private var voskRec: Recognizer? = null
     private var currentModelId: String? = null
+
+    // 检查模型选择、安装路径和目录结构，必要时切换到底层识别器实例。
     private fun ensureRecognizer(): Recognizer? {
         return try {
             val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -1013,6 +1062,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 完全释放识别器和模型对象，通常在服务销毁或显式切换模型时调用。
     private fun stopRecognizer() {
         synchronized(recLock) {
             try {
@@ -1029,6 +1079,7 @@ class OverlayService : Service() {
         }
     }
 
+    // 只有当模型 id 变化时才真正重建 Vosk 识别器，避免重复加载大模型。
     private fun switchRecognizerToModel(modelId: String, modelPath: String) {
         if (currentModelId == modelId && synchronized(recLock) { voskRec != null }) return
         val modelDir = File(modelPath)
@@ -1067,6 +1118,7 @@ class OverlayService : Service() {
         }
     }
 
+    // AudioRecord 返回的是 ShortArray，Vosk 需要 little-endian PCM byte 数组。
     private fun shortToBytesLE(src: ShortArray, n: Int): ByteArray {
         val out = ByteArray(n * 2)
         var j = 0
@@ -1078,6 +1130,7 @@ class OverlayService : Service() {
         return out
     }
 
+    // Vosk 输出的是 JSON 文本，这里只取我们关心的 text / partial 字段。
     private fun extractText(json: String, key: String): String =
         try {
             org.json.JSONObject(json).optString(key, "")
@@ -1085,6 +1138,7 @@ class OverlayService : Service() {
             ""
         }
 
+    // 句子结束附近更值得触发一次翻译刷新，所以单独识别常见中英文标点。
     private fun looksLikeSentenceBoundary(text: String): Boolean {
         return when (text.lastOrNull()) {
             '.', ',', '!', '?', ';', ':', '。', '，', '！', '？', '；', '：' -> true

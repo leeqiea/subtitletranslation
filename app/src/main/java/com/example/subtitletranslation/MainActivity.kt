@@ -33,12 +33,16 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
 
+/**
+ * 主界面负责权限引导、模型管理、翻译配置，以及启动悬浮字幕服务。
+ */
 class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "SubtitleTranslation/Main"
         private const val VOSK_MODELS_PAGE = "https://alphacephei.com/vosk/models"
         private const val VOSK_MODELS_BASE = "https://alphacephei.com/vosk/models"
+        // 这些 SharedPreferences key 会被 Activity 和 Service 共同使用。
         private const val PREF_MODEL_ID = "asr_model_id"
         private const val PREF_TARGET_LANG = "translate_target_lang"
         private const val PREF_DISPLAY_MODE = "subtitle_display_mode"
@@ -57,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         private const val TRANSLATE_DOWNLOAD_PENDING_TTL_MS = 2L * 60 * 60 * 1000
     }
 
+    // 从 Vosk 页面解析出来的一条模型元数据。
     private data class ModelInfo(
         val id: String,
         val lang: String?,
@@ -65,6 +70,7 @@ class MainActivity : AppCompatActivity() {
         val url: String
     )
 
+    // 语言维度的聚合结果，用于在弹窗里按语种展示模型。
     private data class LangItem(
         val lang: String,
         val langKey: String,
@@ -73,14 +79,17 @@ class MainActivity : AppCompatActivity() {
         val smallest: ModelInfo
     )
 
+    // 用来在用户跳转系统授权页后，回到应用时继续未完成的流程。
     private var pendingStartCapture = false
     private var pendingRecordForCapture = false
     private var askedOverlayOnEntry = false
     private var askedRecordOnEntry = false
+    // 主界面的状态展示控件。
     private lateinit var tvModelStatus: TextView
     private lateinit var tvTargetLang: TextView
     private lateinit var tvTranslateStatus: TextView
     private lateinit var tvDisplayMode: TextView
+    // 网络模型列表做内存缓存，避免短时间内重复下载和解析。
     private var cachedModelList: List<ModelInfo>? = null
     private var settingsPrefs: SharedPreferences? = null
     private var settingsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
@@ -119,6 +128,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        // 让底部内容避开导航栏，避免按钮被遮住。
         applyBottomInsetForNavigationBar()
 
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -168,6 +178,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 动态给 ScrollView 增加底部 inset，兼容手势导航和三键导航。
     private fun applyBottomInsetForNavigationBar() {
         val scrollView = findViewById<ScrollView>(R.id.mainScrollView)
         val initialPaddingLeft = scrollView.paddingLeft
@@ -188,6 +199,7 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.requestApplyInsets(scrollView)
     }
 
+    // 从系统设置或授权页返回时，在这里续上之前等待的动作。
     override fun onResume() {
         super.onResume()
         ensurePermissionsOnEntry()
@@ -202,10 +214,12 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // 悬浮窗权限是 OverlayService 能否显示字幕层的前提。
     private fun hasOverlayPermission(): Boolean {
         return Settings.canDrawOverlays(this)
     }
 
+    // 缺权限就跳到系统授权页，真正继续流程留给 onResume 处理。
     private fun ensureOverlayPermission() {
         if (!hasOverlayPermission()) {
             startActivity(
@@ -218,6 +232,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 录音权限是系统音频采集和麦克风采集的共同前提。
     private fun ensureRecordAudioThenProjection() {
         val granted = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED
@@ -230,11 +245,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 弹出 MediaProjection 授权页，把系统音频捕获授权交给系统处理。
     private fun requestMediaProjection() {
         val mpm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mpLauncher.launch(mpm.createScreenCaptureIntent())
     }
 
+    // 应用恢复到前台时，主动把缺失权限补齐，减少按钮点击后的打断感。
     private fun ensurePermissionsOnEntry() {
         if (!hasOverlayPermission()) {
             if (!askedOverlayOnEntry) {
@@ -252,6 +269,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 模型列表更新频率低，所以只在缓存过期后后台刷新一次。
     private fun ensureModelMetadataCachedAsync() {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val lastTs = prefs.getLong(PREF_MODEL_META_TS, 0L)
@@ -270,6 +288,7 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    // 不同系统对前台服务启动限制不同，这里做一次兼容兜底。
     private fun startServiceCompat(i: Intent) {
         try {
             // 应用前台场景优先用 startService，避免某些机型对 startForegroundService 的额外限制
@@ -296,6 +315,7 @@ class MainActivity : AppCompatActivity() {
         return prefs.getString(PREF_MODEL_ID, null) ?: prefs.getString("asr_lang", null)
     }
 
+    // 主界面状态文案依赖于“当前模型是否存在且通过校验”。
     private fun updateModelStatus() {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val modelId = currentModelId(prefs)
@@ -308,6 +328,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 目标语言必须是 ML Kit 支持的代码；旧值非法时自动回退。
     private fun currentTargetLang(prefs: SharedPreferences): String {
         val saved = prefs.getString(PREF_TARGET_LANG, null)
         val all = TranslateLanguage.getAllLanguages()
@@ -327,6 +348,7 @@ class MainActivity : AppCompatActivity() {
         return fallback
     }
 
+    // 刷新目标语言文案，并同步查询离线翻译模型状态。
     @SuppressLint("SetTextI18n")
     private fun updateTargetLangUi() {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -342,6 +364,7 @@ class MainActivity : AppCompatActivity() {
         return if (saved == DISPLAY_TRANSLATION_ONLY) DISPLAY_TRANSLATION_ONLY else DISPLAY_BOTH
     }
 
+    // 把内部显示模式枚举转换成面向用户的文案。
     @SuppressLint("SetTextI18n")
     private fun updateDisplayModeUi() {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -354,6 +377,7 @@ class MainActivity : AppCompatActivity() {
         tvDisplayMode.text = getString(R.string.display_mode_format, label)
     }
 
+    // 模式切换后立即通知悬浮窗刷新，避免界面与设置不同步。
     private fun toggleDisplayMode() {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val current = currentDisplayMode(prefs)
@@ -367,6 +391,7 @@ class MainActivity : AppCompatActivity() {
         startServiceCompat(i)
     }
 
+    // 允许用户直接切换翻译目标语言，并在选择后提前下载离线模型。
     private fun showTargetLanguageDialog() {
         val all = TranslateLanguage.getAllLanguages().toList()
         val items = all
@@ -389,6 +414,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // 只监听关键设置项，方便排查谁改了翻译目标语言。
     private fun installSettingsDebugLogs(prefs: SharedPreferences) {
         settingsPrefs = prefs
         settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
@@ -401,6 +427,7 @@ class MainActivity : AppCompatActivity() {
         Log.i(TAG, "initial settings: $PREF_TARGET_LANG=${prefs.getString(PREF_TARGET_LANG, null)}")
     }
 
+    // Activity 退出时取消监听，防止泄漏旧的上下文。
     private fun uninstallSettingsDebugLogs() {
         val prefs = settingsPrefs
         val listener = settingsListener
@@ -411,6 +438,7 @@ class MainActivity : AppCompatActivity() {
         settingsListener = null
     }
 
+    // 预下载目标语言模型，降低第一次真正翻译时的等待成本。
     @SuppressLint("SetTextI18n")
     private fun downloadTargetModelIfNeeded(lang: String) {
         val model = TranslateRemoteModel.Builder(lang).build()
@@ -432,6 +460,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    // 结合本地已下载状态和“最近在下载”的临时标记来显示翻译模型状态。
     @SuppressLint("SetTextI18n")
     private fun refreshTranslateModelStatus(lang: String) {
         val pending = isTranslateModelDownloading(lang)
@@ -464,6 +493,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    // 下载请求是异步的，这里额外记一个 pending 标志给 UI 使用。
     private fun markTranslateModelDownloading(lang: String, downloading: Boolean) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         prefs.edit {
@@ -476,6 +506,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // pending 状态带 TTL，避免异常退出后界面永远卡在“下载中”。
     private fun isTranslateModelDownloading(lang: String): Boolean {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val pending = prefs.getBoolean(PREF_TRANSLATE_DOWNLOAD_PENDING_PREFIX + lang, false)
@@ -489,6 +520,7 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    // 模型列表弹窗既支持官方模型，也支持用户输入自定义 zip 地址。
     @SuppressLint("SetTextI18n")
     private fun showModelListDialog() {
         val view = layoutInflater.inflate(R.layout.dialog_model_list, null)
@@ -555,6 +587,7 @@ class MainActivity : AppCompatActivity() {
         items: List<LangItem>,
         dialog: AlertDialog
     ) {
+        // 每个语种先展示一个入口按钮，具体型号放到下一层弹窗里。
         container.removeAllViews()
         if (items.isEmpty()) {
             val empty = TextView(this).apply {
@@ -591,6 +624,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 同一语种下可能有 small / big / graph 等不同版本，这里让用户二次选择。
     @SuppressLint("SetTextI18n")
     private fun showModelSelectDialog(item: LangItem, parent: AlertDialog) {
         val models = item.models
@@ -622,6 +656,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // 选择模型后优先复用本地已安装模型，否则再走下载流程。
     @SuppressLint("SetTextI18n")
     private fun selectModelForLanguage(item: LangItem, model: ModelInfo) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -663,6 +698,7 @@ class MainActivity : AppCompatActivity() {
         startModelDownloadForLanguage(item, model, shouldSwitchNow)
     }
 
+    // 官方模型下载完成后会写回路径、模型 id 和推断出的源语言。
     @SuppressLint("SetTextI18n")
     private fun startModelDownloadForLanguage(
         item: LangItem,
@@ -700,6 +736,7 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    // 自定义模型下载逻辑和官方模型基本一致，只是少了官网元数据这一层。
     @SuppressLint("SetTextI18n")
     private fun startCustomModelDownload(modelId: String, url: String) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -730,6 +767,7 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    // 直接从 Vosk 官网 HTML 表格里抽取模型 id、语言、大小和下载链接。
     private fun parseModelList(html: String): List<ModelInfo> {
         val rowRegex = Regex(
             "<tr[^>]*>.*?</tr>",
@@ -748,6 +786,7 @@ class MainActivity : AppCompatActivity() {
             val row = rowMatch.value
             val cells = tdRegex.findAll(row).map { stripTags(it.groupValues[1]) }.toList()
 
+            // Vosk 页面里语种标题和模型行混在同一个表格里，这里先识别“语言标题行”。
             val isLangRow = cells.isNotEmpty() &&
                     row.contains("<strong", ignoreCase = true) &&
                     cells.drop(1).all { it.isBlank() }
@@ -783,6 +822,7 @@ class MainActivity : AppCompatActivity() {
         return list.distinctBy { it.id }.sortedBy { it.id }
     }
 
+    // 只做简单 GET，用于拉取官网模型页面。
     @Suppress("SameParameterValue")
     private fun downloadText(url: String): String {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -798,6 +838,7 @@ class MainActivity : AppCompatActivity() {
         return conn.inputStream.bufferedReader().use { it.readText() }
     }
 
+    // 官网表格内容带了少量 HTML 标签和实体，这里先做最小清洗。
     private fun stripTags(html: String): String {
         return html
             .replace("&nbsp;", " ")
@@ -807,6 +848,7 @@ class MainActivity : AppCompatActivity() {
             .trim()
     }
 
+    // 把官网英文语种名尽量映射成当前系统语言下的显示名称。
     private fun localizeLangName(englishName: String?): String? {
         if (englishName.isNullOrBlank()) return null
         val normalized = englishName.trim()
@@ -824,6 +866,7 @@ class MainActivity : AppCompatActivity() {
         return normalized
     }
 
+    // 用稳定 key 存语种分组，避免直接拿带空格的名字做偏好键值。
     private fun normalizeLangKey(name: String): String {
         return name.lowercase(Locale.ROOT)
             .replace(Regex("\\(.*?\\)"), "")
@@ -831,6 +874,7 @@ class MainActivity : AppCompatActivity() {
             .trim('_')
     }
 
+    // 语种名称比较前先做归一化，降低空格和括号差异的影响。
     private fun normalizeLangDisplay(name: String): String {
         return name.lowercase(Locale.ENGLISH)
             .replace(Regex("\\(.*?\\)"), "")
@@ -838,6 +882,7 @@ class MainActivity : AppCompatActivity() {
             .trim()
     }
 
+    // 尝试把官网语言名映射到 ML Kit 语言代码，找不到时保留少量兜底逻辑。
     private fun findLangCodeForName(englishName: String): String? {
         val target = normalizeLangDisplay(englishName)
         val all = TranslateLanguage.getAllLanguages()
@@ -855,6 +900,7 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
+    // 把模型 URL、语种分组和最小模型这些派生信息提前缓存到 SharedPreferences。
     private fun cacheModelMetadata(models: List<ModelInfo>) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         prefs.edit {
@@ -887,11 +933,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 优先使用官网的语言列推断源语言，缺失时再回退到模型名启发式解析。
     private fun resolveSourceLangForModel(model: ModelInfo): String? {
         return model.lang?.let(::findLangCodeForName)
             ?: AsrLanguageResolver.resolveTranslateSourceLanguage(model.id)
     }
 
+    // 按语言聚合模型，并为每个语种挑出体积最小的版本作为默认展示信息。
     private fun buildLangItems(models: List<ModelInfo>): List<LangItem> {
         val grouped = models.groupBy { it.lang ?: "Unknown" }
         val items = mutableListOf<LangItem>()
@@ -919,6 +967,7 @@ class MainActivity : AppCompatActivity() {
         return items.sortedBy { it.displayName }
     }
 
+    // 解析官网类似 “1.8G / 42M” 的尺寸字符串，方便排序挑选小模型。
     private fun parseSizeToBytes(size: String): Long? {
         val m = Regex("([0-9]+(?:\\.[0-9]+)?)\\s*([KMG])", RegexOption.IGNORE_CASE)
             .find(size) ?: return null
@@ -933,6 +982,7 @@ class MainActivity : AppCompatActivity() {
         return (value * mult).toLong()
     }
 
+    // 自定义下载没有模型 id 时，从 zip 地址推一个尽量稳定的名字。
     private fun deriveModelIdFromUrl(url: String): String {
         val clean = url.substringBefore('?').substringBefore('#')
         val name = clean.substringAfterLast('/')
@@ -942,6 +992,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
+    // 语言代码最终还是要给用户看，所以这里统一转换成本地化语言名。
     private fun displayLangName(tag: String): String {
         val locale = Locale.forLanguageTag(tag)
         val uiLocale = resources.configuration.locales[0] ?: Locale.getDefault()

@@ -10,8 +10,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.ZipInputStream
 
+/**
+ * 管理 Vosk 语音识别模型的下载、解压、校验和本地路径解析。
+ * MainActivity 和 OverlayService 都通过这里与模型文件系统交互。
+ */
 object ModelManager {
 
+    // 过大的模型在手机上常见问题是初始化慢、占内存高，所以这里提前拦住。
     private const val MAX_RECOMMENDED_MODEL_BYTES = 600L * 1024L * 1024L
 
     fun modelRoot(ctx: Context): File = File(ctx.filesDir, "vosk_models")
@@ -26,10 +31,12 @@ object ModelManager {
     fun resolveInstalledPath(ctx: Context, lang: String): File? {
         val dest = modelDir(ctx, lang)
         if (!dest.exists() || !dest.isDirectory) return null
+        // 解压包有时会多包一层目录，这里统一收敛到真正的模型根目录。
         val resolved = resolveModelRoot(dest)
         return if (resolved.exists()) resolved else null
     }
 
+    // 启动识别前做结构校验，避免把损坏或桌面端模型直接交给 Vosk。
     fun validateInstalledModel(
         ctx: Context,
         modelDir: File,
@@ -75,6 +82,7 @@ object ModelManager {
         }
 
         val dest = modelDir(ctx, lang)
+        // 先下载到临时目录，全部成功后再替换正式目录，避免半下载状态污染现有模型。
         val staging = File(root, ".$lang.tmp-${System.currentTimeMillis()}")
         if (staging.exists()) staging.deleteRecursively()
         if (!staging.mkdirs()) {
@@ -96,6 +104,7 @@ object ModelManager {
                 throw java.io.IOException(validationError)
             }
 
+            // 安装新模型前先删除旧目录，避免新旧文件混在一起。
             if (dest.exists() && !dest.deleteRecursively()) {
                 throw java.io.IOException(
                     ctx.getString(R.string.error_replace_model_dir, dest.absolutePath)
@@ -131,7 +140,7 @@ object ModelManager {
             instanceFollowRedirects = true
         }
 
-        // ✅ 先 connect & 检查 HTTP 状态码
+        // 先检查 HTTP 状态，再开始写文件，避免把错误页保存成 zip。
         conn.connect()
         val code = conn.responseCode
         if (code !in 200..299) {
@@ -162,6 +171,7 @@ object ModelManager {
             while (entry != null) {
                 val outPath = File(destDir, entry.name)
                 val canonicalOut = outPath.canonicalFile
+                // 防止 zip-slip，把解压目标限制在 staging 目录内部。
                 val isInsideDest = canonicalOut.path == canonicalDest.path ||
                         canonicalOut.path.startsWith(canonicalDest.path + File.separator)
                 if (!isInsideDest) {
@@ -182,6 +192,7 @@ object ModelManager {
         return destDir
     }
 
+    // Vosk 包可能直接是模型目录，也可能外面再套一层版本目录，这里做兼容。
     private fun resolveModelRoot(root: File): File {
         if (looksLikeModelRoot(root)) return root
         val children = root.listFiles()?.filter {
@@ -197,6 +208,7 @@ object ModelManager {
         return File(dir, "conf").isDirectory || File(dir, "am").isDirectory || File(dir, "graph").isDirectory
     }
 
+    // 用于粗略判断模型是否大到不适合移动端实时使用。
     private fun directorySize(dir: File): Long {
         if (!dir.exists()) return 0L
         return dir.walkTopDown()
