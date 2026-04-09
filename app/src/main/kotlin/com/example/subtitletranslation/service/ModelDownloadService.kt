@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Binder
@@ -136,8 +135,6 @@ class ModelDownloadService : Service() {
         progressCallback = null
     }
 
-    fun getDownloadProgress(modelId: String): DownloadProgress? = downloadProgress[modelId]
-
     fun getAllDownloadProgress(): Map<String, DownloadProgress> = downloadProgress.toMap()
 
     private fun startDownload(request: DownloadRequest) {
@@ -176,7 +173,7 @@ class ModelDownloadService : Service() {
                     speedBps = 0,
                     remainingSeconds = 0
                 )
-            } catch (e: CancellationException) {
+            } catch (_: CancellationException) {
                 val currentStatus = downloadProgress[request.modelId]?.status
                 if (currentStatus != DownloadStatus.PAUSED && currentStatus != DownloadStatus.CANCELLED) {
                     updateProgress(
@@ -357,7 +354,7 @@ class ModelDownloadService : Service() {
             if (!supportsResume && existingBytes > 0) {
                 outFile.delete()
             }
-            if (responseCode !in 200..299 && responseCode != HttpURLConnection.HTTP_PARTIAL) {
+            if (responseCode !in 200..299) {
                 throw java.io.IOException(getString(R.string.error_download_http, responseCode, url))
             }
 
@@ -411,11 +408,7 @@ class ModelDownloadService : Service() {
                         val elapsedMs = now - lastUpdateTime
                         if (elapsedMs >= 500) {
                             val deltaBytes = totalRead - lastSampleBytes
-                            val speedBps = if (elapsedMs > 0) {
-                                (deltaBytes * 1000L) / elapsedMs
-                            } else {
-                                0L
-                            }
+                            val speedBps = (deltaBytes * 1000L) / elapsedMs
                             speedSamples.addLast(speedBps)
                             while (speedSamples.size > 5) {
                                 speedSamples.removeFirst()
@@ -513,7 +506,7 @@ class ModelDownloadService : Service() {
         ) {
             startForegroundCompat(notification)
         } else {
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(NOTIFICATION_ID, notification)
         }
     }
@@ -616,12 +609,12 @@ class ModelDownloadService : Service() {
         ).apply {
             description = getString(R.string.notif_channel_downloads_desc)
         }
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
 
     private fun checkNetworkAvailable(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         val network = cm.activeNetwork ?: return false
         val capabilities = cm.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)

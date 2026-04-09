@@ -34,3 +34,4 @@ google-services.json
 
 # Android profiling
 *.hprof
+release

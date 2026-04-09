@@ -1,13 +1,12 @@
 package com.example.subtitletranslation.model
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.example.subtitletranslation.R
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.zip.ZipInputStream
 
 /**
@@ -21,10 +20,9 @@ object ModelManager {
 
     fun modelRoot(ctx: Context): File = File(ctx.filesDir, "vosk_models")
 
-    fun modelDir(ctx: Context, lang: String): File = modelDir(modelRoot(ctx), lang)
-
     fun modelDir(root: File, lang: String): File = File(root, lang)
 
+    @SuppressLint("UsableSpace")
     fun selectWritableModelRoot(ctx: Context, requiredBytesHint: Long? = null): File {
         val minFreeBytes = requiredBytesHint?.coerceAtLeast(0L) ?: 0L
         return candidateRoots(ctx)
@@ -82,103 +80,6 @@ object ModelManager {
         return null
     }
 
-
-    fun downloadAndInstall(
-        ctx: Context,
-        lang: String,
-        zipUrl: String,
-        onProgress: (percent: Int) -> Unit
-    ): File {
-        val root = selectWritableModelRoot(ctx)
-        if (!root.exists() && !root.mkdirs()) {
-            throw java.io.IOException(
-                ctx.getString(R.string.error_create_model_root, root.absolutePath)
-            )
-        }
-
-        val dest = modelDir(root, lang)
-        // 先下载到临时目录，全部成功后再替换正式目录，避免半下载状态污染现有模型。
-        val staging = File(root, ".$lang.tmp-${System.currentTimeMillis()}")
-        if (staging.exists()) staging.deleteRecursively()
-        if (!staging.mkdirs()) {
-            throw java.io.IOException(
-                ctx.getString(R.string.error_create_language_dir, staging.absolutePath)
-            )
-        }
-
-        try {
-            val zipFile = File(staging, "model.zip")
-            downloadFile(ctx, zipUrl, zipFile, onProgress)
-
-            val extractedRoot = unzip(zipFile, staging)
-            zipFile.delete()
-
-            val resolved = resolveModelRoot(extractedRoot)
-            val validationError = validateInstalledModel(ctx, resolved, checkRuntimeSize = true)
-            if (validationError != null) {
-                throw java.io.IOException(validationError)
-            }
-
-            // 安装新模型前先删除旧目录，避免新旧文件混在一起。
-            removeOtherInstalledCopies(ctx, lang, keepRoot = root)
-            if (dest.exists() && !dest.deleteRecursively()) {
-                throw java.io.IOException(
-                    ctx.getString(R.string.error_replace_model_dir, dest.absolutePath)
-                )
-            }
-            if (!staging.renameTo(dest)) {
-                staging.copyRecursively(dest, overwrite = true)
-                staging.deleteRecursively()
-            }
-
-            return resolveInstalledPath(ctx, lang)
-                ?: throw java.io.IOException(
-                    ctx.getString(R.string.error_model_invalid_layout, dest.absolutePath)
-                )
-        } catch (e: Exception) {
-            staging.deleteRecursively()
-            throw e
-        }
-    }
-
-    private fun downloadFile(ctx: Context, url: String, outFile: File, onProgress: (Int) -> Unit) {
-        outFile.parentFile?.let { parent ->
-            if (!parent.exists() && !parent.mkdirs()) {
-                throw java.io.IOException(
-                    ctx.getString(R.string.error_create_parent_dir, parent.absolutePath)
-                )
-            }
-        }
-
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 15000
-            readTimeout = 15000
-            instanceFollowRedirects = true
-        }
-
-        // 先检查 HTTP 状态，再开始写文件，避免把错误页保存成 zip。
-        conn.connect()
-        val code = conn.responseCode
-        if (code !in 200..299) {
-            throw java.io.IOException(ctx.getString(R.string.error_download_http, code, url))
-        }
-
-        conn.inputStream.use { input ->
-            FileOutputStream(outFile).use { output ->
-                val total = conn.contentLengthLong.coerceAtLeast(0)
-                val buf = ByteArray(64 * 1024)
-                var read: Int
-                var done = 0L
-                while (input.read(buf).also { read = it } >= 0) {
-                    output.write(buf, 0, read)
-                    done += read
-                    if (total > 0) {
-                        onProgress(((done * 100) / total).toInt().coerceIn(0, 100))
-                    }
-                }
-            }
-        }
-    }
 
     private fun unzip(zipFile: File, destDir: File): File {
         val canonicalDest = destDir.canonicalFile

@@ -792,14 +792,6 @@ class OverlayService : Service() {
         }
     }
 
-    // 给识别器预留的串行执行器，方便未来把耗时模型切换从主流程里拆出去。
-    private fun runOnRecognizerExecutor(task: () -> Unit) {
-        try {
-            recognizerExecutor.execute(task)
-        } catch (_: Exception) {
-        }
-    }
-
     // 前台服务通知提供一个回到主界面的入口和一个快速停止入口。
     private fun buildNotification(): Notification {
         val contentIntent = PendingIntent.getActivity(
@@ -1059,23 +1051,6 @@ class OverlayService : Service() {
         } catch (t: Throwable) {
             updateSubtitle(getString(R.string.overlay_recognizer_prepare_failed, messageOrUnknown(t.message)), "")
             null
-        }
-    }
-
-    // 完全释放识别器和模型对象，通常在服务销毁或显式切换模型时调用。
-    private fun stopRecognizer() {
-        synchronized(recLock) {
-            try {
-                voskRec?.close()
-            } catch (_: Exception) {
-            }
-            voskRec = null
-            try {
-                voskModel?.close()
-            } catch (_: Exception) {
-            }
-            voskModel = null
-            currentModelId = null
         }
     }
 
