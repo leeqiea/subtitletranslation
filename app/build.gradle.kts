@@ -14,7 +14,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.example.subtitletranslation"
+    namespace = "com.leaqia.subtitletranslation"
 
     // 如果你要 targetSdk=35，就用 35（最稳）
     compileSdk = 36

@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION", "SameParameterValue")
 
-package com.example.subtitletranslation.service
+package com.leaqia.subtitletranslation.service
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -24,10 +24,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.edit
-import com.example.subtitletranslation.MainActivity
-import com.example.subtitletranslation.R
-import com.example.subtitletranslation.model.ModelManager
-import com.example.subtitletranslation.util.AsrLanguageResolver
+import com.leaqia.subtitletranslation.MainActivity
+import com.leaqia.subtitletranslation.R
+import com.leaqia.subtitletranslation.model.ModelManager
+import com.leaqia.subtitletranslation.util.AsrLanguageResolver
 import com.google.mlkit.nl.translate.TranslateLanguage
 import org.vosk.Model
 import org.vosk.Recognizer

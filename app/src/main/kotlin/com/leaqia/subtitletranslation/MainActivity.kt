@@ -1,6 +1,6 @@
 @file:Suppress("SameParameterValue")
 
-package com.example.subtitletranslation
+package com.leaqia.subtitletranslation
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -26,9 +26,9 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.subtitletranslation.model.ModelManager
-import com.example.subtitletranslation.service.ModelDownloadService
-import com.example.subtitletranslation.util.AsrLanguageResolver
+import com.leaqia.subtitletranslation.model.ModelManager
+import com.leaqia.subtitletranslation.service.ModelDownloadService
+import com.leaqia.subtitletranslation.util.AsrLanguageResolver
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.nl.translate.TranslateLanguage

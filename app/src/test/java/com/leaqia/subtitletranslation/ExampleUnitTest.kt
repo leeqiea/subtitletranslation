@@ -1,4 +1,4 @@
-package com.example.subtitletranslation
+package com.leaqia.subtitletranslation
 
 import org.junit.Test
 

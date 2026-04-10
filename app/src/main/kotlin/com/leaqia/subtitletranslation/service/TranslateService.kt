@@ -1,4 +1,4 @@
-package com.example.subtitletranslation.service
+package com.leaqia.subtitletranslation.service
 
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.languageid.LanguageIdentification

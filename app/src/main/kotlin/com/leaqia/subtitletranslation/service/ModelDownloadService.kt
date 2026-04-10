@@ -1,5 +1,6 @@
-package com.example.subtitletranslation.service
+package com.leaqia.subtitletranslation.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -13,9 +14,9 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.edit
-import com.example.subtitletranslation.MainActivity
-import com.example.subtitletranslation.R
-import com.example.subtitletranslation.model.ModelManager
+import com.leaqia.subtitletranslation.MainActivity
+import com.leaqia.subtitletranslation.R
+import com.leaqia.subtitletranslation.model.ModelManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -572,16 +573,12 @@ class ModelDownloadService : Service() {
     }
 
     private fun startForegroundCompat(notification: Notification) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        )
     }
 
     private fun stopForegroundIfNoActiveDownloads() {
@@ -591,12 +588,7 @@ class ModelDownloadService : Service() {
                 it.status == DownloadStatus.VALIDATING
         }
         if (!hasActive) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_DETACH)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(false)
-            }
+            stopForeground(STOP_FOREGROUND_DETACH)
         }
     }
 
@@ -628,6 +620,7 @@ class ModelDownloadService : Service() {
         }
     }
 
+    @SuppressLint("UsableSpace")
     private fun ensureStorageAvailable(root: File, totalBytes: Long, existingBytes: Long) {
         if (totalBytes <= 0L) return
         val remainingBytes = (totalBytes - existingBytes).coerceAtLeast(0L)
@@ -649,6 +642,7 @@ class ModelDownloadService : Service() {
         return ((done.coerceAtMost(total) * 100.0) / total).roundToInt()
     }
 
+    @SuppressLint("DefaultLocale")
     private fun formatBytes(bytes: Long): String {
         if (bytes <= 0L) return "0 B"
         val units = arrayOf("B", "KB", "MB", "GB", "TB")

@@ -1,6 +1,6 @@
-package com.example.subtitletranslation
+package com.leaqia.subtitletranslation
 
-import com.example.subtitletranslation.util.AsrLanguageResolver
+import com.leaqia.subtitletranslation.util.AsrLanguageResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

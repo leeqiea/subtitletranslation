@@ -1,4 +1,4 @@
-package com.example.subtitletranslation.util
+package com.leaqia.subtitletranslation.util
 
 import java.util.Locale
 

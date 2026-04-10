@@ -1,8 +1,8 @@
-package com.example.subtitletranslation.model
+package com.leaqia.subtitletranslation.model
 
 import android.annotation.SuppressLint
 import android.content.Context
-import com.example.subtitletranslation.R
+import com.leaqia.subtitletranslation.R
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
