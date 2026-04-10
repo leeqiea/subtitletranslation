@@ -295,8 +295,7 @@ class ModelDownloadService : Service() {
             val resolved = ModelManager.resolveModelRootPublic(extractedRoot)
             val validationError = ModelManager.validateInstalledModel(
                 this@ModelDownloadService,
-                resolved,
-                checkRuntimeSize = false
+                resolved
             )
             if (validationError != null) {
                 throw java.io.IOException(validationError)

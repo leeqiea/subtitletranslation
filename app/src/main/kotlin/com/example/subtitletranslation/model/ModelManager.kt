@@ -35,7 +35,7 @@ object ModelManager {
 
     fun isInstalled(ctx: Context, lang: String): Boolean {
         val resolved = resolveInstalledPath(ctx, lang) ?: return false
-        return validateInstalledModel(ctx, resolved, checkRuntimeSize = false) == null
+        return validateInstalledModel(ctx, resolved) == null
     }
 
     fun resolveInstalledPath(ctx: Context, lang: String): File? {
@@ -52,8 +52,7 @@ object ModelManager {
     // 启动识别前做结构校验，避免把损坏或桌面端模型直接交给 Vosk。
     fun validateInstalledModel(
         ctx: Context,
-        modelDir: File,
-        checkRuntimeSize: Boolean = true
+        modelDir: File
     ): String? {
         if (!modelDir.exists() || !modelDir.isDirectory) {
             return ctx.getString(R.string.error_model_invalid_layout, modelDir.absolutePath)
@@ -73,9 +72,9 @@ object ModelManager {
             return ctx.getString(R.string.error_model_invalid_layout, "graph/HCLG.fst")
         }
 
-        if (checkRuntimeSize) {
-            // 兼容旧调用方：大模型只做提醒，不再因为体积过大直接判定为无效。
-        }
+//        if (checkRuntimeSize) {
+//            // 兼容旧调用方：大模型只做提醒，不再因为体积过大直接判定为无效。
+//        }
 
         return null
     }
