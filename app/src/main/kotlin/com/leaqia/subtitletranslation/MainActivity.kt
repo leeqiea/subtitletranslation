@@ -28,6 +28,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.leaqia.subtitletranslation.model.ModelManager
 import com.leaqia.subtitletranslation.service.ModelDownloadService
+import com.leaqia.subtitletranslation.service.OverlayService
 import com.leaqia.subtitletranslation.util.AsrLanguageResolver
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
@@ -64,8 +65,6 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_TRANSLATE_DOWNLOAD_TS_PREFIX = "translate_dl_ts_"
         private const val TRANSLATE_DOWNLOAD_PENDING_TTL_MS = 2L * 60 * 60 * 1000
         private const val OVERLAY_SERVICE_CLASS_SUFFIX = ".service.OverlayService"
-        private const val ACTION_OVERLAY_UPDATE = "com.example.subtitletranslation.action.UPDATE"
-        private const val ACTION_OVERLAY_START_CAPTURE = "com.example.subtitletranslation.action.START_CAPTURE"
         private const val EXTRA_OVERLAY_RESULT_CODE = "result_code"
         private const val EXTRA_OVERLAY_RESULT_DATA = "result_data"
     }
@@ -134,7 +133,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { res ->
         if (res.resultCode == RESULT_OK && res.data != null) {
-            val i = overlayServiceIntent(ACTION_OVERLAY_START_CAPTURE).apply {
+            val i = overlayServiceIntent(OverlayService.ACTION_START_CAPTURE).apply {
                 putExtra(EXTRA_OVERLAY_RESULT_CODE, res.resultCode)
                 putExtra(EXTRA_OVERLAY_RESULT_DATA, res.data)
             }
@@ -435,7 +434,7 @@ class MainActivity : AppCompatActivity() {
         prefs.edit { putString(PREF_DISPLAY_MODE, next) }
         updateDisplayModeUi()
         if (!hasOverlayPermission()) return
-        val i = overlayServiceIntent(ACTION_OVERLAY_UPDATE)
+        val i = overlayServiceIntent(OverlayService.ACTION_UPDATE)
         startServiceCompat(i)
     }
 

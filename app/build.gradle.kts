@@ -20,7 +20,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.subtitletranslation"
+        applicationId = "com.leaqia.subtitletranslation"
         minSdk = 29
         //noinspection EditedTargetSdkVersion
         targetSdk = 36

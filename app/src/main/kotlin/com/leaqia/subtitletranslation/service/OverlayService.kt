@@ -45,12 +45,12 @@ class OverlayService : Service() {
 
     companion object {
         private const val TAG = "SubtitleTranslation/Overlay"
-        const val ACTION_START = "com.example.subtitletranslation.action.START"
-        const val ACTION_UPDATE = "com.example.subtitletranslation.action.UPDATE"
-        const val ACTION_STOP = "com.example.subtitletranslation.action.STOP"
+        const val ACTION_START = "com.leaqia.subtitletranslation.action.START"
+        const val ACTION_UPDATE = "com.leaqia.subtitletranslation.action.UPDATE"
+        const val ACTION_STOP = "com.leaqia.subtitletranslation.action.STOP"
 
-        const val ACTION_START_CAPTURE = "com.example.subtitletranslation.action.START_CAPTURE"
-        const val ACTION_START_MIC_CAPTURE = "com.example.subtitletranslation.action.START_MIC_CAPTURE"
+        const val ACTION_START_CAPTURE = "com.leaqia.subtitletranslation.action.START_CAPTURE"
+        const val ACTION_START_MIC_CAPTURE = "com.leaqia.subtitletranslation.action.START_MIC_CAPTURE"
 
         const val EXTRA_TEXT = "subtitle_text"
         const val EXTRA_RESULT_CODE = "result_code"

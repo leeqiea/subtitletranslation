@@ -1,15 +1,10 @@
 package com.leaqia.subtitletranslation.service
 
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.app.*
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -17,16 +12,7 @@ import androidx.core.content.edit
 import com.leaqia.subtitletranslation.MainActivity
 import com.leaqia.subtitletranslation.R
 import com.leaqia.subtitletranslation.model.ModelManager
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.HttpURLConnection
@@ -45,10 +31,10 @@ class ModelDownloadService : Service() {
         private const val NOTIFICATION_ID = 2001
         private const val PREFS_SETTINGS = "settings"
 
-        const val ACTION_START_DOWNLOAD = "com.example.subtitletranslation.action.START_DOWNLOAD"
-        const val ACTION_PAUSE_DOWNLOAD = "com.example.subtitletranslation.action.PAUSE_DOWNLOAD"
-        const val ACTION_RESUME_DOWNLOAD = "com.example.subtitletranslation.action.RESUME_DOWNLOAD"
-        const val ACTION_CANCEL_DOWNLOAD = "com.example.subtitletranslation.action.CANCEL_DOWNLOAD"
+        const val ACTION_START_DOWNLOAD = "com.leaqia.subtitletranslation.action.START_DOWNLOAD"
+        const val ACTION_PAUSE_DOWNLOAD = "com.leaqia.subtitletranslation.action.PAUSE_DOWNLOAD"
+        const val ACTION_RESUME_DOWNLOAD = "com.leaqia.subtitletranslation.action.RESUME_DOWNLOAD"
+        const val ACTION_CANCEL_DOWNLOAD = "com.leaqia.subtitletranslation.action.CANCEL_DOWNLOAD"
 
         const val EXTRA_MODEL_ID = "model_id"
         const val EXTRA_MODEL_URL = "model_url"
